@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美国站佣金率穷举测算器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f3ef;
+      --surface: #fffdf8;
+      --panel: rgba(255, 253, 248, 0.94);
+      --ink: #201915;
+      --muted: #665c54;
+      --line: #ddd3c7;
+      --accent: #9b4d20;
+      --accent-2: #176766;
+      --accent-3: #3f5e8c;
+      --soft: #fff1e3;
+      --soft-2: #eaf6f4;
+      --soft-3: #eef3fb;
+      --danger: #a83f2c;
+      --good: #23623d;
+      --shadow: 0 16px 42px rgba(42, 29, 18, 0.11);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(155, 77, 32, 0.12), transparent 36%),
+        linear-gradient(250deg, rgba(23, 103, 102, 0.12), transparent 32%),
+        var(--bg);
+    }
+
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px 18px 42px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 18px;
+      padding: 24px;
+      border: 1px solid rgba(32, 25, 21, 0.08);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255, 248, 240, 0.98), rgba(250, 255, 253, 0.92));
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3 { margin: 0 0 10px; line-height: 1.18; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 21px; }
+    h3 { font-size: 15px; }
+    p { margin: 0 0 10px; color: var(--muted); line-height: 1.65; }
+    a { color: var(--accent-3); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: var(--accent);
+      background: rgba(155, 77, 32, 0.09);
+      border: 1px solid rgba(155, 77, 32, 0.16);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(32, 25, 21, 0.09);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid rgba(32, 25, 21, 0.07);
+    }
+
+    .panel-body {
+      padding: 16px 18px 18px;
+    }
+
+    .stack { display: grid; gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      min-height: 40px;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 220px;
+      resize: vertical;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(23, 103, 102, 0.55);
+      box-shadow: 0 0 0 3px rgba(23, 103, 102, 0.12);
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      min-height: 40px;
+      padding: 9px 14px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    button.ghost {
+      background: transparent;
+      color: var(--accent-2);
+      border: 1px solid rgba(23, 103, 102, 0.26);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .notice {
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(155, 77, 32, 0.18);
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .file-upload {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px dashed rgba(23, 103, 102, 0.34);
+      border-radius: 12px;
+      background: var(--soft-2);
+    }
+
+    .file-upload input {
+      background: #fff;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      background: #fff;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--accent-2);
+      border-color: var(--accent-2);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      min-height: 82px;
+      padding: 13px;
+      border-radius: 12px;
+      border: 1px solid rgba(32, 25, 21, 0.08);
+      background: #fff;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.15;
+      margin-bottom: 5px;
+      color: var(--ink);
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric.good { background: var(--soft-2); }
+    .metric.bad { background: #fff0ed; }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(32, 25, 21, 0.08);
+      border-radius: 12px;
+      background: #fff;
+      max-height: 620px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(32, 25, 21, 0.07);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8f3ec;
+      color: #4d3d32;
+      font-weight: 800;
+    }
+
+    td.wrap, th.wrap { white-space: normal; min-width: 260px; }
+    .gain { color: var(--good); font-weight: 750; }
+    .loss { color: var(--danger); font-weight: 750; }
+
+    .rule-editor {
+      min-height: 380px;
+      white-space: pre;
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--soft-3);
+      color: #314764;
+      border: 1px solid rgba(63, 94, 140, 0.14);
+      font-size: 13px;
+    }
+
+    .status.error {
+      background: #fff0ed;
+      color: var(--danger);
+      border-color: rgba(168, 63, 44, 0.18);
+    }
+
+    .hint { font-size: 13px; }
+    .tab-panel[hidden] { display: none; }
+    .wide-field { grid-column: 1 / -1; }
+
+    @media (max-width: 980px) {
+      header, .layout { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 620px) {
+      main { padding: 14px 10px 30px; }
+      header { padding: 18px; }
+      h1 { font-size: 28px; }
+      .grid, .grid-3, .summary { grid-template-columns: 1fr; }
+      .panel-head { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>亚马逊佣金率穷举测算器</h1>
+        <p>按站点代码、类目费率、价格分段和每件最低佣金穷举测算 referral fee，可对单品价格区间做价格点扫描，也可批量导入 SKU。</p>
+        <p class="hint">站点字段按 FBA 费计算器习惯填写代码：US、CA、MX、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP。未录入费率表的站点不会套用其它国家规则。</p>
+      </div>
+      <span class="badge">REFERRAL FEE · ENUMERATOR</span>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>测算输入</h2>
+            <p class="hint">日常定价按有效 sale price / your price 测算佣金；买家支付运费、礼品包装和税费口径放在“口径”页说明。</p>
+          </div>
+        </div>
+        <div class="panel-body stack">
+          <div class="grid">
+            <label>站点代码
+              <select id="country"></select>
+            </label>
+            <label>SKU
+              <input id="sku" value="SKU-001">
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>佣金类目
+              <select id="category"></select>
+            </label>
+            <label>商品售价（有效 sale price / your price）
+              <input id="itemPrice" type="number" min="0" step="any" placeholder="留空则穷举佣金率场景">
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>最低佣金
+              <input id="minimumFee" type="number" min="0" step="any" value="0.30">
+            </label>
+            <label>规则状态
+              <input id="ruleStatus" readonly>
+            </label>
+          </div>
+
+          <div class="notice">分段规则按“超过阈值部分”计费；服饰等阶梯类目按总销售金额落入某个价格段后整单应用对应费率。</div>
+
+          <h3>测算方式</h3>
+          <div class="notice">
+            <strong>单品计算：</strong>已确定某个 SKU 的售价，想看具体佣金金额、有效佣金率和是否触发最低佣金。<br>
+            <strong>佣金率场景穷举：</strong>还没定价，先看该佣金类目官方规则下可能出现哪些佣金率。<br>
+            <strong>价格范围佣金率穷举：</strong>已有定价区间，想看这个价格范围内会出现哪些佣金率，以及最低/最高佣金金额。
+          </div>
+
+          <h3>价格范围佣金率穷举</h3>
+          <div class="grid-3">
+            <label>起始售价
+              <input id="priceStart" type="number" min="0" step="any" value="5">
+            </label>
+            <label>结束售价
+              <input id="priceEnd" type="number" min="0" step="any" value="60">
+            </label>
+            <label>价格间隔
+              <input id="priceStep" type="number" min="0.01" step="any" value="1">
+            </label>
+          </div>
+          <p class="hint">价格间隔表示每次递增多少售价：填 1 会按 5、6、7 扫描；填 0.5 会按 5、5.5、6 扫描。</p>
+
+          <div class="actions">
+            <button id="runSingle" type="button">单品计算</button>
+            <button id="runRateList" class="secondary" type="button">佣金率场景穷举</button>
+            <button id="runRange" class="secondary" type="button">价格范围佣金率穷举</button>
+          </div>
+        </div>
+      </aside>
+
+      <section>
+        <div class="tabs">
+          <button class="tab active" data-tab="results" type="button">结果</button>
+          <button class="tab" data-tab="batch" type="button">批量导入</button>
+          <button class="tab" data-tab="rules" type="button">费率表</button>
+          <button class="tab" data-tab="sources" type="button">口径</button>
+        </div>
+
+        <section class="panel tab-panel" id="tab-results">
+          <div class="panel-head">
+            <div>
+              <h2>测算结果</h2>
+              <p class="hint" id="resultHint">先运行一次单品计算或穷举。</p>
+            </div>
+            <div class="actions">
+              <button id="exportResults" class="secondary" type="button">导出结果 CSV</button>
+              <button id="downloadTemplate" class="secondary" type="button">下载模板</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="summary" id="summary"></div>
+            <div class="table-wrap">
+              <table id="resultTable"></table>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" id="tab-batch" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>批量导入</h2>
+              <p class="hint">CSV 表头：country, sku, category, item_price, minimum_referral_fee。category 填 Amazon referral fee 佣金类目；country 填 US、CA、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP 这类站点缩写；item_price 留空时会输出该佣金类目的佣金率场景。</p>
+            </div>
+            <div class="actions">
+              <button id="runBatch" type="button">批量计算</button>
+              <button id="loadExample" class="secondary" type="button">载入示例</button>
+            </div>
+          </div>
+          <div class="panel-body stack">
+            <div class="file-upload">
+              <label>上传批量文件
+                <input id="batchFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values">
+              </label>
+              <div class="hint">支持 CSV、TSV 文件上传。Excel 可先另存为 CSV；读取后会自动填入下方预览区。</div>
+            </div>
+            <textarea id="batchInput" spellcheck="false"></textarea>
+            <div class="notice">country 按 FBA 费计算器页面规则填 US/us、CA/ca、UK/uk、DE/de、FR/fr、IT/it、ES/es、NL/nl、SA/sa、AE/ae、AU/au、JP/jp 这类站点缩写；category 指 Amazon referral fee 佣金类目，可填页面费率表里的 id 或佣金类目名称。</div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" id="tab-rules" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>费率表</h2>
+              <p class="hint">可直接编辑 JSON 后应用。mode 为 tiered_portion 表示超额分段，mode 为 whole_order_threshold 表示按总销售金额所在价格段整单计费。</p>
+            </div>
+            <div class="actions">
+              <button id="applyRules" type="button">应用费率表</button>
+              <button id="resetRules" class="secondary" type="button">恢复默认</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <textarea id="ruleEditor" class="rule-editor" spellcheck="false"></textarea>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" id="tab-sources" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>计算口径</h2>
+              <p class="hint">这里把工具的关键假设写清楚，方便和后台交易明细对账。</p>
+            </div>
+          </div>
+          <div class="panel-body stack">
+            <div class="notice">不同站点的 referral fee 分母销售额计算规则不同；下表按政策来源对比哪些金额计入佣金率分母。本工具不会把某一站点的基数口径自动套到其它站点。</div>
+            <div class="table-wrap">
+              <table id="feeBaseTable"></table>
+            </div>
+            <div class="notice">本工具的定价输入默认填写 Amazon 上有效的 sale price / your price，等同于假设买家支付运费、礼品包装费和其它费用为 0。若后续要测 FBM 运费收费场景，可以把运费加进商品售价一起测。</div>
+            <div class="notice">多数类目存在每件最低 referral fee；金额按所选站点原币计算。如果按比例计算的佣金小于最低值，本工具会取最低佣金，并展示最低佣金是否触发。</div>
+            <div class="notice" id="sourceStatus"></div>
+          </div>
+        </section>
+
+        <div id="status" class="status">就绪：请选择类目并开始测算。</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const DEFAULT_RULES = [
+      { id: "amazon_device_accessories", name: "亚马逊设备配件", aliases: ["Amazon 设备配件"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.45 }] },
+      { id: "appliances_compact", name: "电器 - 小型", aliases: ["家电 - 小型/其他", "Appliances - Compact"], mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 300, rate: 0.15 }, { rate: 0.08 }] },
+      { id: "appliances_full_size", name: "电器 - 大型", aliases: ["家电 - 大型", "Appliances - Full-size"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.08 }] },
+      { id: "automotive_powersports", name: "汽车和户外动力设备", aliases: ["汽车和摩托运动用品"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.12 }] },
+      { id: "base_equipment_power_tools", name: "基础设备电动工具", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.12 }] },
+      { id: "baby_products", name: "母婴", aliases: ["婴儿用品"], mode: "whole_order_threshold", minimum: 0.30, tiers: [{ upTo: 10, rate: 0.08 }, { rate: 0.15 }] },
+      { id: "backpacks_handbags_luggage", name: "背包、手提包和箱包", aliases: ["背包、手袋和行李箱"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "beauty_health_personal_care", name: "美妆个护健康", aliases: ["美妆、健康与个人护理", "美妆、健康和个人护理"], mode: "whole_order_threshold", minimum: 0.30, tiers: [{ upTo: 10, rate: 0.08 }, { rate: 0.15 }] },
+      { id: "business_industrial_scientific", name: "商业、工业与科学用品", aliases: ["商业、工业和科学用品"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.12 }] },
+      { id: "clothing_accessories", name: "服装和配饰", aliases: ["服装与配饰"], mode: "whole_order_threshold", minimum: 0.30, tiers: [{ upTo: 15, rate: 0.05 }, { upTo: 20, rate: 0.10 }, { rate: 0.17 }] },
+      { id: "computers", name: "电脑", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.08 }] },
+      { id: "consumer_electronics", name: "消费类电子产品", aliases: ["消费电子"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.08 }] },
+      { id: "electronics_accessories", name: "电子产品配件", aliases: ["电子配件"], mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 100, rate: 0.15 }, { rate: 0.08 }] },
+      { id: "eyewear", name: "眼镜", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "fine_art", name: "艺术品", mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 100, rate: 0.20 }, { upTo: 1000, rate: 0.15 }, { upTo: 5000, rate: 0.10 }, { rate: 0.05 }] },
+      { id: "footwear", name: "鞋靴", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "furniture", name: "家具", mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 200, rate: 0.15 }, { rate: 0.10 }] },
+      { id: "gift_cards", name: "礼品卡", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.20 }] },
+      { id: "grocery_gourmet", name: "食品", aliases: ["食品和美食", "Grocery and Gourmet"], mode: "whole_order_threshold", minimum: 0.30, tiers: [{ upTo: 15, rate: 0.08 }, { rate: 0.15 }] },
+      { id: "home_kitchen", name: "家居及厨房用品", aliases: ["家居与厨房"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "jewelry", name: "珠宝首饰", aliases: ["珠宝"], mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 250, rate: 0.20 }, { rate: 0.05 }] },
+      { id: "lawn_garden", name: "草坪和园艺", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "lawn_mowers_snow_throwers", name: "割草机和除雪机", mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 500, rate: 0.15 }, { rate: 0.08 }] },
+      { id: "mattresses", name: "床垫", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "media_books_dvd_music", name: "媒介类商品 - 图书、DVD、音乐、软件、视频", aliases: ["图书、DVD、音乐等媒介"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }], note: "媒介类商品还需要为每件售出商品支付 $1.80 的交易手续费，本工具只算销售佣金。" },
+      { id: "merchant_fulfilled_services", name: "卖家自配送服务", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.20 }], note: "适用于通过亚马逊本地销售提供的服务。" },
+      { id: "musical_instruments_av", name: "乐器和影音制作", aliases: ["乐器和音视频制作"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "office_products", name: "办公用品", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "pet_products", name: "宠物用品", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }], note: "处方饲粮销售佣金为 22%。" },
+      { id: "sports_outdoors", name: "运动户外", aliases: ["运动与户外", "运动和户外"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "tires", name: "轮胎", mode: "flat", minimum: 0.30, tiers: [{ rate: 0.10 }] },
+      { id: "tools_home_improvement", name: "工具和家居装修", aliases: ["工具与家居装修", "工具和家装"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "toys_games", name: "玩具和游戏", aliases: ["玩具与游戏"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "video_games_accessories", name: "视频游戏和游戏配件", aliases: ["电子游戏配件"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] },
+      { id: "video_games_consoles", name: "视频游戏机", aliases: ["电子游戏主机"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.08 }] },
+      { id: "watches", name: "钟表", aliases: ["手表"], mode: "tiered_portion", minimum: 0.30, tiers: [{ upTo: 1500, rate: 0.16 }, { rate: 0.03 }] },
+      { id: "everything_else", name: "其他", aliases: ["其他所有类目"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] }
+    ];
+
+    const TEMPLATE_HEADERS = ["country", "sku", "category", "item_price", "minimum_referral_fee"];
+    const EXAMPLE_ROWS = [
+      ["US", "SKU-APPAREL-001", "clothing_accessories", "", "0.30"],
+      ["US", "SKU-BEAUTY-001", "beauty_health_personal_care", "9.99", "0.30"],
+      ["US", "SKU-EA-001", "electronics_accessories", "", "0.30"],
+      ["US", "SKU-HOME-001", "home_kitchen", "24.99", "0.30"]
+    ];
+
+    const CA_REFERRAL_RULES = [
+      ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.45, 0.40),
+      ruleFlat("automotive", "汽车用品", 0.12, 0.40),
+      ruleWhole("baby", "母婴", 15, 0.08, 0.15, 0.40),
+      ruleFlat("backpacks_handbags_luggage", "背包、手提包和箱包", 0.15, 0.40),
+      ruleFlat("base_power_tools", "基础设备电动工具", 0.12, 0.40),
+      ruleWhole("beauty_health_personal_care", "美妆和个护健康", 15, 0.08, 0.15, 0.40),
+      ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.12, 0.40),
+      ruleWhole("clothing_accessories", "服装和配饰", 19.99, 0.10, 0.17, 0.40),
+      ruleTiered("small_appliances", "小型电器", 300, 0.15, 0.08, 0.40),
+      ruleFlat("computers", "电脑", 0.08, 0.40),
+      ruleFlat("consumer_electronics", "消费类电子产品", 0.08, 0.40),
+      ruleTiered("electronics_accessories", "电子产品配件", 100, 0.15, 0.08, 0.40),
+      ruleFlat("everything_else", "其他1", 0.15, 0.40, ["其他"]),
+      ruleFlat("extended_warranties", "延长保修、保护计划及服务合约", 0.96, 0),
+      ruleFlat("eyewear", "眼镜", 0.17, 0.40),
+      ruleFlat("shoes", "鞋靴", 0.15, 0.40),
+      ruleTiered("full_size_appliances", "全尺寸电器", 300, 0.15, 0.08, 0.40),
+      ruleTiered("furniture", "家具", 250, 0.15, 0.10, 0.40),
+      ruleWhole("grocery", "食品", 20, 0.08, 0.15, 0),
+      ruleFlat("home_kitchen", "家居及厨房用品", 0.15, 0.40),
+      ruleTiered("jewelry", "珠宝首饰", 325, 0.20, 0.05, 0.40),
+      ruleFlat("lawn_garden", "草坪和花园", 0.15, 0.40),
+      ruleFlat("mattresses", "床垫", 0.15, 0.40),
+      ruleFlat("media", "媒介类商品 - 图书、DVD、音乐、软件、视频", 0.15, 0),
+      ruleFlat("musical_instruments_av", "乐器和影音制作", 0.15, 0.40),
+      ruleFlat("office_products", "办公用品", 0.15, 0.40),
+      ruleFlat("pet_products", "宠物用品", 0.15, 0.40),
+      ruleFlat("sports_outdoors", "运动户外", 0.15, 0.40),
+      ruleFlat("tires", "轮胎", 0.10, 0.40),
+      ruleFlat("tools_home_improvement", "工具和家居装修", 0.15, 0.40),
+      ruleFlat("toys_games", "玩具和游戏", 0.15, 0.40),
+      ruleFlat("video_game_consoles", "视频游戏机", 0.08, 0),
+      ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.15, 0),
+      ruleTiered("watches", "钟表", 1500, 0.16, 0.03, 0.40)
+    ];
+
+    const MX_REFERRAL_RULES = [
+      ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.45, 8),
+      ruleFlat("baby", "母婴用品", 0.15, 8),
+      ruleFlat("consumer_electronics", "消费类电子产品¹", 0.10, 8, ["消费类电子产品"]),
+      ruleTiered("electronics_accessories", "电子产品配件", 2000, 0.15, 0.08, 8),
+      ruleFlat("furniture", "家具", 0.15, 8),
+      ruleFlat("mattresses", "床垫", 0.15, 8),
+      ruleFlat("lawn_garden", "草坪和园艺", 0.15, 8),
+      ruleWhole("grocery", "食品", 300, 0.12, 0.15, 8),
+      ruleFlat("home_kitchen", "家居和厨房", 0.15, 8),
+      ruleFlat("large_appliances", "大型电器", 0.15, 8),
+      ruleFlat("musical_instruments_av", "乐器和影音制作", 0.15, 8),
+      ruleFlat("office_products", "办公用品", 0.10, 8),
+      ruleFlat("sports_outdoors", "运动户外", 0.15, 8),
+      ruleFlat("computers", "电脑¹", 0.10, 8, ["电脑"]),
+      ruleFlat("pet_products", "宠物用品", 0.15, 8),
+      ruleFlat("tools_home_improvement", "工具和家居装修", 0.15, 8, [], "官方表注明电动工具为 12.0%；如适用请选“基础设备电动工具”。"),
+      ruleFlat("base_power_tools", "基础设备电动工具", 0.12, 8),
+      ruleWhole("toys_games", "玩具和游戏", 300, 0.08, 0.15, 8),
+      ruleFlat("everything_else", "其他²", 0.15, 8, ["其他"]),
+      ruleFlat("media", "媒介类商品 - 图书、DVD、音乐、软件和视频", 0.15, 8),
+      ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.15, 8),
+      ruleFlat("video_game_consoles", "视频游戏机", 0.08, 8),
+      ruleFlat("automotive_powersports", "汽车和户外动力设备", 0.12, 8),
+      ruleFlat("tires", "轮胎", 0.10, 8),
+      ruleWhole("beauty", "美妆", 200, 0.12, 0.15, 8),
+      ruleWhole("health_personal_care", "个护健康", 200, 0.12, 0.15, 8),
+      ruleFlat("beer_wine_spirits", "啤酒、葡萄酒和烈酒", 0.08, 8),
+      ruleFlat("clothing_accessories", "服装和配饰", 0.15, 8),
+      ruleFlat("shoes", "鞋靴", 0.15, 8),
+      ruleFlat("eyewear", "眼镜", 0.15, 8),
+      ruleFlat("backpacks_handbags_luggage", "背包、手提包和箱包", 0.15, 8),
+      ruleTiered("watches", "钟表", 5000, 0.16, 0.05, 8),
+      ruleFlat("jewelry", "珠宝首饰", 0.15, 8),
+      ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.14, 8)
+    ];
+
+    function europeanReferralRules({ minimum, automotiveThreshold, furnitureThreshold, jewelryThreshold, watchesThreshold, currencyNote }) {
+      const primeNote = `${currencyNote} 页面另列亚马逊物流和卖家自配送 Prime 选品的服装和配饰特殊分段，当前按常规定价口径计算。`;
+      return [
+        ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.45, minimum),
+        ruleTiered("automotive_powersports", "汽车和户外动力设备", automotiveThreshold, 0.15, 0.09, minimum),
+        ruleWhole("baby", "母婴", 10, 0.08, 0.15, minimum),
+        ruleWhole("baby_strollers_safety", "婴儿推车和安全装备", 10, 0.08, 0.15, minimum),
+        ruleFlat("backpacks_handbags", "背包和手提包", 0.15, minimum),
+        ruleWhole("beauty_health_personal_care", "美妆个护健康", 10, 0.08, 0.15, minimum),
+        ruleWhole("work_safety_gloves", "可重复使用的工作和安全手套", 10, 0.08, 0.15, minimum),
+        ruleFlat("beer_wine_spirits", "啤酒、葡萄酒和烈酒", 0.10, minimum),
+        ruleFlat("books", "图书", 0.15, 0),
+        ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.15, minimum),
+        ruleWhole3("clothing_accessories", "服装和配饰**", 15, 0.05, 20, 0.10, 0.15, minimum, [], primeNote),
+        ruleFlat("business_electrical_energy", "商业电气和能源用品", 0.12, minimum),
+        ruleFlat("small_appliances", "小型电器", 0.15, minimum),
+        ruleFlat("computers", "电脑", 0.07, minimum),
+        ruleFlat("consumer_electronics", "消费类电子产品", 0.07, minimum),
+        ruleFlat("bicycle_accessories", "自行车配件***", 0.15, minimum),
+        ruleTiered("electronics_accessories", "电子产品配件", 100, 0.15, 0.08, minimum),
+        ruleTiered("printer_scanner_accessories", "打印机和扫描仪配件", 100, 0.15, 0.08, minimum),
+        ruleFlat("eyewear", "眼镜", 0.15, minimum),
+        ruleFlat("protective_eyewear", "护目镜", 0.15, minimum),
+        ruleFlat("shoes", "鞋靴", 0.15, minimum),
+        ruleFlat("full_size_appliances", "全尺寸电器", 0.07, minimum),
+        ruleTiered("furniture", "家具", furnitureThreshold, 0.15, 0.10, minimum),
+        ruleFlat("furniture_accessories", "家具配件", 0.13, minimum),
+        ruleWhole("grocery", "食品*", 10, 0.05, 0.15, 0, ["食品"]),
+        ruleFlat("amazon_handmade", "Amazon Handmade", 0.12, minimum, ["手工艺品"]),
+        ruleWhole("home_products", "家居用品*", 20, 0.08, 0.15, minimum, ["家居用品"]),
+        ruleFlat("kitchen", "厨房用品*", 0.15, minimum, ["厨房用品"]),
+        ruleFlat("home_linens_rugs", "家居亚麻制品和地毯", 0.15, minimum),
+        ruleTiered("jewelry", "珠宝首饰", jewelryThreshold, 0.20, 0.05, minimum),
+        ruleFlat("lawn_garden", "草坪和园艺", 0.15, minimum),
+        ruleFlat("luggage", "箱包", 0.15, minimum),
+        ruleFlat("luggage_accessories", "箱包配件", 0.15, minimum),
+        ruleFlat("mattresses", "床垫", 0.15, minimum),
+        ruleFlat("music_video_dvd", "音乐、影视和 DVD", 0.15, 0),
+        ruleFlat("musical_instruments_av", "乐器和影音制作", 0.12, minimum),
+        ruleFlat("office_products", "办公用品", 0.15, minimum),
+        ruleFlat("packaging_materials", "包装材料", 0.15, minimum),
+        ruleFlat("pet_products", "宠物用品", 0.15, minimum),
+        ruleWhole("pet_clothing_food", "宠物服装和食品*", 10, 0.05, 0.15, minimum, ["宠物服装和食品"]),
+        ruleFlat("software", "软件", 0.15, 0),
+        ruleFlat("sports_outdoors", "运动户外", 0.15, minimum),
+        ruleFlat("tires", "轮胎", 0.07, minimum),
+        ruleFlat("tools_home_improvement", "工具和家居装修", 0.13, minimum),
+        ruleFlat("doors_windows_shower", "门窗和淋浴配件", 0.13, minimum),
+        ruleFlat("home_adhesives_cable_ties", "家用粘合剂和线缆扎带", 0.13, minimum),
+        ruleFlat("toys_games", "玩具和游戏", 0.15, minimum),
+        ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.15, 0),
+        ruleFlat("video_game_consoles", "视频游戏机", 0.08, 0),
+        ruleWhole("vitamins_minerals_supplements", "维生素、矿物质及补充剂*", 10, 0.05, 0.15, minimum, ["维生素、矿物质及补充剂"]),
+        ruleTiered("watches", "钟表", watchesThreshold, 0.15, 0.05, minimum),
+        ruleFlat("everything_else", "其他", 0.15, minimum)
+      ];
+    }
+
+    const MARKETPLACES = {
+      US: {
+        label: "US 美国",
+        currency: "USD",
+        source: "https://sellercentral.amazon.com/help/hub/reference/external/GTG4BAWSY39Z98Z3",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "total sales price：商品价格 + 买家支付配送费 + 礼品包装费；不含由 Amazon tax calculation services 计算的税",
+        defaultMinimum: 0.30,
+        rules: DEFAULT_RULES
+      },
+      CA: {
+        label: "CA 加拿大",
+        currency: "CAD",
+        source: "https://sellercentral.amazon.ca/help/hub/reference/external/G200336920",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "total sales price：买家支付总金额，包括商品价格以及所有运费或礼品包装费；不含通过亚马逊税务计算服务计算得出的税费",
+        defaultMinimum: 0.40,
+        rules: CA_REFERRAL_RULES
+      },
+      MX: {
+        label: "MX 墨西哥",
+        currency: "MXN",
+        source: "https://sellercentral.amazon.com.mx/help/hub/reference/external/G200336920",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家支付的税费；费率和最低佣金按页面“含增值税”列录入",
+        defaultMinimum: 8,
+        rules: MX_REFERRAL_RULES
+      },
+      UK: {
+        label: "UK 英国",
+        currency: "GBP",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GH78LW99F4XF3Z38",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.25,
+        rules: europeanReferralRules({ minimum: 0.25, automotiveThreshold: 45, furnitureThreshold: 175, jewelryThreshold: 225, watchesThreshold: 225, currencyNote: "UK" })
+      },
+      DE: {
+        label: "DE 德国",
+        currency: "EUR",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GGYND54PM5WB84UM#",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.30,
+        rules: europeanReferralRules({ minimum: 0.30, automotiveThreshold: 50, furnitureThreshold: 200, jewelryThreshold: 250, watchesThreshold: 250, currencyNote: "DE" })
+      },
+      FR: {
+        label: "FR 法国",
+        currency: "EUR",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GF9K4BWLZXRPC62U",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.30,
+        rules: europeanReferralRules({ minimum: 0.30, automotiveThreshold: 50, furnitureThreshold: 200, jewelryThreshold: 250, watchesThreshold: 250, currencyNote: "FR" })
+      },
+      IT: {
+        label: "IT 意大利",
+        currency: "EUR",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GTM7BFLLKEA8T7C4",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.30,
+        rules: europeanReferralRules({ minimum: 0.30, automotiveThreshold: 50, furnitureThreshold: 200, jewelryThreshold: 250, watchesThreshold: 250, currencyNote: "IT" })
+      },
+      ES: {
+        label: "ES 西班牙",
+        currency: "EUR",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GCZC4GX2L32EKP6F",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.30,
+        rules: europeanReferralRules({ minimum: 0.30, automotiveThreshold: 50, furnitureThreshold: 200, jewelryThreshold: 250, watchesThreshold: 250, currencyNote: "ES" })
+      },
+      NL: {
+        label: "NL 荷兰",
+        currency: "EUR",
+        source: "https://sellercentral.amazon.co.uk/help/hub/reference/external/GUMBCNJPHD3UV47Q",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "销售费用基数：买家支付款项，包括商品价格以及所有运费、礼品包装费或其他费用；销售佣金按该站点销售佣金价目表计算",
+        defaultMinimum: 0.30,
+        rules: europeanReferralRules({ minimum: 0.30, automotiveThreshold: 50, furnitureThreshold: 200, jewelryThreshold: 250, watchesThreshold: 250, currencyNote: "NL" })
+      },
+      SA: {
+        label: "SA 沙特阿拉伯",
+        currency: "SAR",
+        source: "https://sellercentral.amazon.sa/help/hub/reference/external/G200336920",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "total sales price：商品价格 + 运费 + 礼品包装费 + 其他费用；不含通过 Amazon tax calculation services 计算的税",
+        defaultMinimum: 1,
+        rules: [
+          ruleFlat("apparel", "服装", 0.15, 1), ruleFlat("automotive", "汽车用品", 0.12, 1),
+          ruleWhole("baby", "母婴", 50, 0.08, 0.15, 1), ruleWhole("beauty", "美妆", 50, 0.085, 0.11, 1),
+          ruleFlat("books", "图书", 0.15, 1), ruleFlat("camera", "摄影摄像", 0.08, 1),
+          ruleFlat("consumer_electronics", "消费类电子产品", 0.055, 1), ruleTiered("electronics_accessories", "电子产品配件", 250, 0.15, 0.08, 1),
+          ruleTiered("furniture", "家具", 750, 0.15, 0.10, 1), ruleFlat("gift_cards", "礼品卡", 0.10, 1),
+          ruleWhole("grocery", "食品", 25, 0.03, 0.09, 0), ruleFlat("headphones_portable_audio", "头戴式耳机和便携式音频设备", 0.10, 1),
+          ruleWhole("health_personal_care", "个护健康", 50, 0.085, 0.11, 1), ruleFlat("home", "家居", 0.14, 1),
+          ruleFlat("home_entertainment", "家庭娱乐", 0.065, 1), ruleTiered("jewelry", "珠宝首饰", 1000, 0.16, 0.05, 1),
+          ruleFlat("kitchen", "厨房用品", 0.14, 1), ruleFlat("luggage", "箱包", 0.15, 1),
+          ruleFlat("large_appliances", "大型电器", 0.06, 1), ruleFlat("mobile_phones_tablets", "手机和平板电脑", 0.055, 1),
+          ruleFlat("music", "音乐", 0.15, 1), ruleFlat("musical_instruments", "乐器", 0.15, 1),
+          ruleFlat("office_products", "办公用品", 0.15, 1), ruleFlat("outdoors", "户外用品", 0.14, 1),
+          ruleFlat("personal_computers", "个人电脑", 0.06, 1), ruleFlat("perfume", "香水", 0.15, 1),
+          ruleWhole("personal_care_appliances", "个护用品", 50, 0.08, 0.13, 1), ruleFlat("pet_products", "宠物用品", 0.15, 1),
+          ruleFlat("shoes", "鞋靴", 0.15, 1), ruleFlat("small_appliances", "小型电器", 0.12, 1),
+          ruleFlat("software", "软件", 0.10, 1), ruleFlat("sports", "体育用品", 0.13, 1),
+          ruleFlat("stamp_collectibles", "邮票收藏品", 0.10, 1), ruleFlat("tools_home_improvement", "工具和家居装修", 0.14, 1),
+          ruleFlat("toys", "玩具", 0.14, 1), ruleFlat("video_dvd", "影视和 DVD", 0.13, 1),
+          ruleFlat("video_game_consoles", "视频游戏机", 0.06, 1), ruleFlat("video_games", "视频游戏", 0.14, 1),
+          ruleTiered("watches", "钟表", 5000, 0.15, 0.05, 1), ruleTiered("wireless", "无线产品", 250, 0.15, 0.08, 1),
+          ruleFlat("everything_else", "所有其他分类", 0.10, 1)
+        ]
+      },
+      AE: {
+        label: "AE 阿联酋",
+        currency: "AED",
+        source: "https://sellercentral.amazon.ae/help/hub/reference/external/G200336920",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "total sales price：商品价格 + 运费 + 礼品包装费 + 其他费用；不含通过 Amazon tax calculation services 计算的税",
+        defaultMinimum: 1,
+        rules: [
+          ruleFlat("apparel", "服装", 0.15, 1), ruleFlat("automotive", "汽车用品", 0.12, 1),
+          ruleWhole("baby", "母婴", 50, 0.08, 0.15, 1), ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.11, 0),
+          ruleWhole("beauty", "美妆", 50, 0.08, 0.15, 1), ruleFlat("books", "图书", 0.15, 1),
+          ruleFlat("camera", "摄影摄像", 0.08, 1), ruleFlat("consumer_electronics", "消费类电子产品", 0.07, 1),
+          ruleTiered("electronics_accessories", "电子产品配件（包括电脑和相机配件）", 250, 0.15, 0.08, 1, ["电子产品配件"]),
+          ruleTiered("furniture", "家具", 750, 0.15, 0.10, 1), ruleFlat("gift_cards", "礼品卡", 0.05, 1),
+          ruleWhole("grocery", "食品", 50, 0.05, 0.11, 0), ruleWhole("health_personal_care", "个护健康", 50, 0.08, 0.15, 1),
+          ruleFlat("home", "家居", 0.15, 1), ruleFlat("home_entertainment", "家庭娱乐", 0.05, 1),
+          ruleTiered("jewelry", "珠宝首饰", 1000, 0.16, 0.05, 1), ruleFlat("kitchen", "厨房用品", 0.15, 1),
+          ruleFlat("luggage", "箱包", 0.15, 1), ruleFlat("large_appliances", "大型电器", 0.06, 1),
+          ruleFlat("mobile_phones", "手机", 0.05, 1), ruleFlat("music", "音乐", 0.10, 1),
+          ruleFlat("musical_instruments", "乐器", 0.15, 1), ruleFlat("office_products", "办公用品", 0.14, 1),
+          ruleFlat("outdoors", "户外用品", 0.15, 1), ruleFlat("computer_storage", "电脑存储", 0.06, 1),
+          ruleFlat("perfume", "香水", 0.15, 1), ruleWhole("personal_care_appliances", "个护用品", 50, 0.08, 0.15, 1),
+          ruleWhole("pet_products", "宠物用品", 50, 0.08, 0.15, 0), ruleFlat("shoes", "鞋靴", 0.15, 1),
+          ruleFlat("small_appliances", "小型电器", 0.13, 1), ruleFlat("software", "软件", 0.10, 1),
+          ruleFlat("sports", "体育用品", 0.14, 1), ruleFlat("stamp_collectibles", "邮票收藏品", 0.10, 1),
+          ruleFlat("tools_home_improvement", "工具和家居装修", 0.15, 1), ruleFlat("toys", "玩具", 0.14, 1),
+          ruleFlat("video_dvd", "影视和 DVD", 0.10, 1), ruleFlat("video_game_consoles", "视频游戏机", 0.06, 1),
+          ruleFlat("video_games", "视频游戏", 0.15, 1), ruleTiered("watches", "钟表", 5000, 0.15, 0.05, 1),
+          ruleFlat("everything_else", "所有其他分类", 0.10, 1)
+        ]
+      },
+      AU: {
+        label: "AU 澳大利亚",
+        currency: "AUD",
+        source: "https://sellercentral.amazon.com.au/help/hub/reference/external/G200336920",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "total sales price：买家支付总金额，包括运费和所有礼品包装费；销售佣金不设最低或最高限制",
+        defaultMinimum: 0,
+        rules: [
+          ruleFlat("alcoholic_beverages", "酒精饮料", 0.10, 0), ruleFlat("automotive", "汽车用品", 0.105, 0),
+          ruleWhole("baby", "母婴用品", 20, 0.08, 0.11, 0), ruleFlat("base_power_tools", "基础电动工具", 0.07, 0),
+          ruleWhole("beauty_health_personal_care", "美妆、健康及个护用品", 20, 0.08, 0.13, 0),
+          ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.11, 0),
+          ruleWhole("clothing_accessories", "服装与配饰", 20, 0.10, 0.13, 0), ruleTiered("computers", "电脑", 150, 0.08, 0.06, 0),
+          ruleFlat("consumer_electronics", "消费类电子产品", 0.08, 0), ruleFlat("electronics_accessories", "电子产品配件", 0.135, 0),
+          ruleFlat("furniture", "家具", 0.12, 0), ruleWhole("grocery", "食品", 20, 0.08, 0.10, 0),
+          ruleFlat("home_kitchen", "家居及厨房", 0.13, 0), ruleFlat("home_kitchen_products", "家居及厨房用品", 0.08, 0),
+          ruleTiered("jewelry", "珠宝首饰", 200, 0.15, 0.05, 0), ruleFlat("lawn_garden", "草坪及花园", 0.105, 0),
+          ruleFlat("luggage", "箱包", 0.13, 0), ruleFlat("large_appliances", "大型家电", 0.07, 0),
+          ruleFlat("media", "媒介类（图书、DVD、音乐、软件、影视）", 0.15, 0), ruleFlat("musical_instruments_av", "乐器及影音制作", 0.11, 0),
+          ruleFlat("office_products", "办公用品", 0.13, 0), ruleWhole("pet_products", "宠物用品", 20, 0.10, 0.13, 0),
+          ruleTiered("shoes_handbags_sunglasses", "鞋靴、手提包及太阳镜", 50, 0.14, 0.10, 0),
+          ruleTiered("sports_outdoors", "体育及户外用品", 200, 0.13, 0.12, 0),
+          ruleWhole("tools_home_improvement", "工具及家居装修", 20, 0.10, 0.13, 0),
+          ruleFlat("toys_games", "玩具及游戏", 0.12, 0), ruleFlat("tires", "轮胎", 0.09, 0),
+          ruleFlat("video_game_consoles", "视频游戏机", 0.06, 0), ruleFlat("video_games_accessories", "视频游戏及游戏配件", 0.09, 0),
+          ruleTiered("watches", "钟表", 50, 0.12, 0.08, 0), ruleFlat("everything_else", "其他¹", 0.15, 0, ["其他"])
+        ]
+      },
+      JP: {
+        label: "JP 日本",
+        currency: "JPY",
+        source: "https://sellercentral-japan.amazon.com/help/hub/reference/external/G200336920#wjz_cjc_jcb",
+        status: "enabled",
+        feeBaseStatus: "confirmed",
+        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家为每件商品支付的适用税费",
+        defaultMinimum: 30,
+        rules: [
+          ruleFlat("media", "媒介类商品 - 图书、DVD、音乐、软件、视频", 0.154, 0),
+          ruleWhole("consumer_electronics", "消费类电子产品", 750, 0.05, 0.084, 30), ruleWhole("computers", "电脑", 750, 0.05, 0.084, 30),
+          ruleWhole("electronics_accessories", "电子产品配件", 750, 0.05, 0.104, 30), ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.454, 30),
+          ruleWhole("musical_instruments_av", "乐器和影音制作", 750, 0.05, 0.104, 30),
+          ruleWhole3("beauty_health_personal_care", "美妆2、个护健康", 750, 0.05, 1500, 0.084, 0.104, 30),
+          ...["运动户外","汽车和户外动力设备","轮胎","玩具和游戏"].map((name, i) => ruleWhole(["sports_outdoors","automotive_powersports","tires","toys_games"][i], name, 750, 0.05, 0.104, 30)),
+          ruleWhole("video_game_consoles", "视频游戏机", 750, 0.05, 0.084, 30), ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.154, 0),
+          ruleWhole3("pet_products", "宠物用品", 750, 0.05, 1500, 0.084, 0.154, 30),
+          ...["办公用品","家居和厨房","草坪和园艺","家具","床垫","工具和家居装修","商业、工业与科学用品"].map((name, i) => ruleWhole(["office_products","home_kitchen","lawn_garden","furniture","mattresses","tools_home_improvement","business_industrial_scientific"][i], name, 750, 0.05, 0.154, 30)),
+          ...["家用电器和厨房电器","小型电器","全尺寸电器"].map((name, i) => ruleWhole(["home_kitchen_appliances","small_appliances","full_size_appliances"][i], name, 750, 0.05, 0.104, 30)),
+          ruleWhole3("professional_medical_supplies", "专业医疗用品", 750, 0.05, 1500, 0.084, 0.104, 30),
+          ruleWhole3("grocery", "食品", 750, 0.05, 1500, 0.084, 0.104, 30), ruleWhole("beer", "啤酒", 750, 0.05, 0.069, 30),
+          ruleWhole("watches", "钟表", 750, 0.05, 0.154, 30), ruleHybrid("jewelry", "珠宝首饰", 750, 0.05, 10000, 0.104, 0.064, 30),
+          ruleWhole3("baby", "母婴", 750, 0.05, 1500, 0.084, 0.154, 30),
+          ruleHybrid("clothing_accessories", "服装和配饰", 750, 0.05, 3000, 0.124, 0.084, 30, 2500, 0.084),
+          ruleHybrid("eyewear", "眼镜", 750, 0.05, 3000, 0.124, 0.084, 30),
+          ruleHybrid("shoes", "鞋靴", 750, 0.05, 7500, 0.124, 0.064, 30),
+          ruleHybrid("backpacks_handbags_luggage", "背包、手提包和箱包", 750, 0.05, 7500, 0.124, 0.064, 30),
+          ruleWhole("everything_else", "其他3", 750, 0.05, 0.154, 30, ["其他"])
+        ]
+      }
+    };
+
+    const INITIAL_MARKETPLACE_RULES = Object.fromEntries(
+      Object.entries(MARKETPLACES).map(([code, item]) => [code, structuredClone(item.rules)])
+    );
+    const INITIAL_MARKETPLACE_STATUS = Object.fromEntries(
+      Object.entries(MARKETPLACES).map(([code, item]) => [code, item.status])
+    );
+
+    let currentMarketplace = "US";
+    let rules = structuredClone(MARKETPLACES.US.rules);
+    let resultRows = [];
+
+    function ruleFlat(id, name, rate, minimum, aliases = [], note = "") {
+      return { id, name, aliases, mode: "flat", minimum, tiers: [{ rate }], note };
+    }
+
+    function ruleWhole(id, name, threshold, lowRate, highRate, minimum, aliases = [], note = "") {
+      return { id, name, aliases, mode: "whole_order_threshold", minimum, tiers: [{ upTo: threshold, rate: lowRate }, { rate: highRate }], note };
+    }
+
+    function ruleWhole3(id, name, threshold1, rate1, threshold2, rate2, rate3, minimum, aliases = [], note = "") {
+      return { id, name, aliases, mode: "whole_order_threshold", minimum, tiers: [{ upTo: threshold1, rate: rate1 }, { upTo: threshold2, rate: rate2 }, { rate: rate3 }], note };
+    }
+
+    function ruleTiered(id, name, threshold, firstRate, restRate, minimum, aliases = [], note = "") {
+      return { id, name, aliases, mode: "tiered_portion", minimum, tiers: [{ upTo: threshold, rate: firstRate }, { rate: restRate }], note };
+    }
+
+    function ruleHybrid(id, name, lowThreshold, lowRate, portionThreshold, portionRate, excessRate, minimum, middleThreshold = null, middleRate = null, aliases = [], note = "") {
+      const tiers = [{ upTo: lowThreshold, rate: lowRate, calculation: "whole" }];
+      if (middleThreshold && middleRate !== null) tiers.push({ upTo: middleThreshold, rate: middleRate, calculation: "whole" });
+      tiers.push({ upTo: portionThreshold, rate: portionRate, calculation: "whole" });
+      tiers.push({ portionThreshold, rate: portionRate, excessRate, calculation: "tiered_above" });
+      return { id, name, aliases, mode: "hybrid_threshold_portion", minimum, tiers, note };
+    }
+
+    function safeNumber(value, fallback = 0) {
+      const number = Number(String(value ?? "").trim().replaceAll(",", ""));
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function round2(value) {
+      return Math.round((value + Number.EPSILON) * 100) / 100;
+    }
+
+    function formatMoney(value) {
+      return round2(value).toFixed(2);
+    }
+
+    function formatPercent(value) {
+      return `${round2(value * 100).toFixed(2)}%`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            field += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          row.push(field);
+          field = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (char === "\r" && next === "\n") i += 1;
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = "";
+        } else {
+          field += char;
+        }
+      }
+      row.push(field);
+      if (row.some(cell => String(cell).trim() !== "")) rows.push(row);
+      return rows.filter(item => item.some(cell => String(cell).trim() !== ""));
+    }
+
+    function escapeCsv(value) {
+      const text = String(value ?? "");
+      if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+      return text;
+    }
+
+    function toCsv(rows, headers) {
+      return [headers, ...rows.map(row => headers.map(header => row[header] ?? ""))]
+        .map(row => row.map(escapeCsv).join(","))
+        .join("\r\n");
+    }
+
+    function tableRowsToCsv(rows) {
+      return rows
+        .map(row => row.map(escapeCsv).join(","))
+        .join("\r\n");
+    }
+
+    function parseTsv(text) {
+      return text
+        .split(/\r?\n/)
+        .filter(line => line.trim() !== "")
+        .map(line => line.split("\t"));
+    }
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function setStatus(message, isError = false) {
+      const el = document.getElementById("status");
+      el.textContent = message;
+      el.className = isError ? "status error" : "status";
+    }
+
+    async function readBatchFile(file) {
+      const name = file.name.toLowerCase();
+      if (name.endsWith(".csv")) {
+        return await file.text();
+      }
+      if (name.endsWith(".tsv")) {
+        return tableRowsToCsv(parseTsv(await file.text()));
+      }
+      if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+        throw new Error("当前网页离线版仅支持 CSV/TSV 上传；Excel 请先另存为 CSV 后上传。");
+      }
+      throw new Error("仅支持 CSV、TSV 文件。");
+    }
+
+    function rateLabel(rule) {
+      if (rule.mode === "flat") return formatPercent(rule.tiers[0].rate);
+      if (rule.mode === "hybrid_threshold_portion") {
+        return rule.tiers.map((tier, index) => {
+          if (tier.calculation === "tiered_above") {
+            return `>${tier.portionThreshold}: ${formatPercent(tier.rate)} / excess ${formatPercent(tier.excessRate)}`;
+          }
+          const previous = index > 0 ? rule.tiers[index - 1].upTo : 0;
+          return previous ? `${previous}-${tier.upTo}: ${formatPercent(tier.rate)}` : `<= ${tier.upTo}: ${formatPercent(tier.rate)}`;
+        }).join(" / ");
+      }
+      return rule.tiers.map((tier, index) => {
+        const prefix = index === 0 ? `<= ${tier.upTo}` : (tier.upTo ? `至 ${tier.upTo}` : "以上");
+        return `${prefix}: ${formatPercent(tier.rate)}`;
+      }).join(" / ");
+    }
+
+    function getMarketplace(code) {
+      const key = String(code || currentMarketplace || "US").trim().toUpperCase();
+      const marketplace = MARKETPLACES[key];
+      if (!marketplace) throw new Error(`不支持的站点：${code}`);
+      return { code: key, ...marketplace };
+    }
+
+    function getRulesForMarketplace(code) {
+      return getMarketplace(code).rules || [];
+    }
+
+    function buildRuleMap(marketplaceCode = currentMarketplace) {
+      const map = new Map();
+      getRulesForMarketplace(marketplaceCode).forEach(rule => {
+        map.set(rule.id.toLowerCase(), rule);
+        map.set(rule.name.toLowerCase(), rule);
+        (rule.aliases || []).forEach(alias => map.set(String(alias).toLowerCase(), rule));
+      });
+      return map;
+    }
+
+    function findRule(category, marketplaceCode = currentMarketplace) {
+      const marketplace = getMarketplace(marketplaceCode);
+      if (!marketplace.rules.length) {
+        throw new Error(`${marketplace.label} 的佣金费率表尚未从 ${marketplace.source} 录入；为避免误算，当前不使用其它站点规则。`);
+      }
+      const key = String(category || "").trim().toLowerCase();
+      const rule = buildRuleMap(marketplace.code).get(key);
+      if (!rule) throw new Error(`找不到佣金类目：${category}`);
+      return rule;
+    }
+
+    function calculateRawFee(totalSalesPrice, rule) {
+      if (rule.mode === "flat") {
+        return {
+          rawFee: totalSalesPrice * rule.tiers[0].rate,
+          appliedRateLabel: formatPercent(rule.tiers[0].rate),
+          formula: `${formatMoney(totalSalesPrice)} x ${formatPercent(rule.tiers[0].rate)}`
+        };
+      }
+
+      if (rule.mode === "whole_order_threshold") {
+        const tier = rule.tiers.find(item => item.upTo === undefined || totalSalesPrice <= item.upTo);
+        return {
+          rawFee: totalSalesPrice * tier.rate,
+          appliedRateLabel: formatPercent(tier.rate),
+          formula: `${formatMoney(totalSalesPrice)} x ${formatPercent(tier.rate)}`
+        };
+      }
+
+      if (rule.mode === "hybrid_threshold_portion") {
+        const wholeTier = rule.tiers.find(item => item.calculation === "whole" && totalSalesPrice <= item.upTo);
+        if (wholeTier) {
+          return {
+            rawFee: totalSalesPrice * wholeTier.rate,
+            appliedRateLabel: formatPercent(wholeTier.rate),
+            formula: `${formatMoney(totalSalesPrice)} x ${formatPercent(wholeTier.rate)}`
+          };
+        }
+        const tiered = rule.tiers.find(item => item.calculation === "tiered_above");
+        const firstPart = tiered.portionThreshold * tiered.rate;
+        const restPart = (totalSalesPrice - tiered.portionThreshold) * tiered.excessRate;
+        return {
+          rawFee: firstPart + restPart,
+          appliedRateLabel: "分段",
+          formula: `${formatMoney(tiered.portionThreshold)} x ${formatPercent(tiered.rate)} + ${formatMoney(totalSalesPrice - tiered.portionThreshold)} x ${formatPercent(tiered.excessRate)}`
+        };
+      }
+
+      let previous = 0;
+      let rawFee = 0;
+      const parts = [];
+      rule.tiers.forEach(tier => {
+        if (totalSalesPrice <= previous) return;
+        const upper = tier.upTo ?? totalSalesPrice;
+        const taxable = Math.max(0, Math.min(totalSalesPrice, upper) - previous);
+        if (taxable > 0) {
+          rawFee += taxable * tier.rate;
+          parts.push(`${formatMoney(taxable)} x ${formatPercent(tier.rate)}`);
+        }
+        previous = upper;
+      });
+      return {
+        rawFee,
+        appliedRateLabel: "分段",
+        formula: parts.join(" + ")
+      };
+    }
+
+    function calculateReferral(input) {
+      const marketplace = getMarketplace(input.marketplace ?? input.country);
+      const rule = findRule(input.category, marketplace.code);
+      const itemPrice = safeNumber(input.item_price ?? input.item_price_usd ?? input.itemPrice, 0);
+      const minimum = safeNumber(input.minimum_referral_fee ?? input.minimum_referral_fee_usd ?? input.minimumFee ?? rule.minimum ?? marketplace.defaultMinimum ?? 0, 0);
+      const totalSalesPrice = round2(itemPrice);
+      const raw = calculateRawFee(totalSalesPrice, rule);
+      const proportionalFee = round2(raw.rawFee);
+      const referralFee = round2(Math.max(proportionalFee, minimum));
+      const minimumTriggered = referralFee > proportionalFee;
+      const effectiveRate = totalSalesPrice > 0 ? referralFee / totalSalesPrice : 0;
+
+      return {
+        sku: String(input.sku || "SKU").trim(),
+        country: marketplace.code,
+        currency: marketplace.currency,
+        category_id: rule.id,
+        category_name: rule.name,
+        rule_mode: rule.mode,
+        price_condition: "已提供售价",
+        item_price_local_currency: formatMoney(itemPrice),
+        total_sales_price_local_currency: formatMoney(totalSalesPrice),
+        rate_rule: rateLabel(rule),
+        applied_rate: raw.appliedRateLabel,
+        proportional_referral_fee_local_currency: formatMoney(proportionalFee),
+        minimum_referral_fee_local_currency: formatMoney(minimum),
+        referral_fee_local_currency: formatMoney(referralFee),
+        effective_referral_rate: formatPercent(effectiveRate),
+        net_after_referral_local_currency: formatMoney(totalSalesPrice - referralFee),
+        minimum_triggered: minimumTriggered ? "YES" : "NO",
+        formula: raw.formula,
+        rule_source_url: marketplace.source,
+        note: rule.note || ""
+      };
+    }
+
+    function hasPrice(input) {
+      return String(input.item_price ?? input.item_price_usd ?? input.itemPrice ?? "").trim() !== "";
+    }
+
+    function tierCondition(rule, tier, index) {
+      const previous = index > 0 ? rule.tiers[index - 1].upTo : 0;
+      if (rule.mode === "flat") return "所有售价";
+      if (rule.mode === "whole_order_threshold") {
+        if (index === 0 && tier.upTo !== undefined) return `售价 <= $${formatMoney(tier.upTo)}`;
+        if (tier.upTo !== undefined) return `$${formatMoney(previous)} < 售价 <= $${formatMoney(tier.upTo)}`;
+        return `售价 > $${formatMoney(previous)}`;
+      }
+      if (rule.mode === "hybrid_threshold_portion") {
+        if (tier.calculation === "tiered_above") return `售价 > ${formatMoney(tier.portionThreshold)}，按超额分段`;
+        if (index === 0) return `售价 <= ${formatMoney(tier.upTo)}`;
+        return `${formatMoney(previous)} < 售价 <= ${formatMoney(tier.upTo)}`;
+      }
+      if (index === 0 && tier.upTo !== undefined) return `$0 - $${formatMoney(tier.upTo)} 部分`;
+      if (tier.upTo !== undefined) return `$${formatMoney(previous)} - $${formatMoney(tier.upTo)} 部分`;
+      return `超过 $${formatMoney(previous)} 的部分`;
+    }
+
+    function enumerateRateScenarios(input) {
+      const marketplace = getMarketplace(input.marketplace ?? input.country);
+      const rule = findRule(input.category, marketplace.code);
+      const minimum = safeNumber(input.minimum_referral_fee ?? input.minimum_referral_fee_usd ?? input.minimumFee ?? rule.minimum ?? marketplace.defaultMinimum ?? 0, 0);
+      return rule.tiers.map((tier, index) => ({
+        sku: String(input.sku || "SKU").trim(),
+        country: marketplace.code,
+        currency: marketplace.currency,
+        category_id: rule.id,
+        category_name: rule.name,
+        rule_mode: rule.mode,
+        price_condition: tierCondition(rule, tier, index),
+        item_price_local_currency: "未提供",
+        total_sales_price_local_currency: "未提供",
+        rate_rule: rateLabel(rule),
+        applied_rate: formatPercent(tier.rate),
+        proportional_referral_fee_local_currency: "待售价",
+        minimum_referral_fee_local_currency: formatMoney(minimum),
+        referral_fee_local_currency: "待售价",
+        effective_referral_rate: "取决于最低佣金",
+        net_after_referral_local_currency: "待售价",
+        minimum_triggered: "待售价",
+        formula: rule.mode === "tiered_portion"
+          ? `${tierCondition(rule, tier, index)} x ${formatPercent(tier.rate)}；整单按各分段累加后与最低佣金比较`
+          : `售价 x ${formatPercent(tier.rate)}，再与最低佣金比较`,
+        rule_source_url: marketplace.source,
+        note: rule.note || "售价未提供，当前行为佣金率场景穷举。"
+      }));
+    }
+
+    function uniqueJoined(values) {
+      return [...new Set(values.filter(value => String(value ?? "").trim() !== ""))].join(", ");
+    }
+
+    function uniqueCount(values) {
+      return new Set(values.filter(value => String(value ?? "").trim() !== "")).size;
+    }
+
+    function aggregateSkuResult(input, scenarioRows, mode) {
+      const numericFees = scenarioRows
+        .map(row => safeNumber(row.referral_fee_local_currency, NaN))
+        .filter(Number.isFinite);
+      const cheapest = numericFees.length
+        ? scenarioRows.reduce((best, row) => safeNumber(row.referral_fee_local_currency, Infinity) < safeNumber(best.referral_fee_local_currency, Infinity) ? row : best, scenarioRows[0])
+        : null;
+      const highest = numericFees.length
+        ? scenarioRows.reduce((best, row) => safeNumber(row.referral_fee_local_currency, -Infinity) > safeNumber(best.referral_fee_local_currency, -Infinity) ? row : best, scenarioRows[0])
+        : null;
+      const first = scenarioRows[0];
+      const marketplace = getMarketplace(input.marketplace ?? input.country);
+      const suppliedPrice = hasPrice(input) ? formatMoney(safeNumber(input.item_price ?? input.item_price_usd ?? input.itemPrice, 0)) : "";
+      const minFee = uniqueJoined(scenarioRows.map(row => row.minimum_referral_fee_local_currency));
+      return {
+        sku: String(input.sku || "SKU").trim(),
+        country: marketplace.code,
+        currency: marketplace.currency,
+        category_name: first.category_name,
+        status: "ok",
+        calculation_mode: mode,
+        item_price_local_currency: suppliedPrice,
+        price_band: hasPrice(input) ? "已提供售价" : "UNKNOWN / ENUMERATED",
+        price_conditions: uniqueJoined(scenarioRows.map(row => row.price_condition)),
+        applied_referral_rates: uniqueJoined(scenarioRows.map(row => row.applied_rate)),
+        rate_rule: first.rate_rule,
+        minimum_referral_fee_local_currency: minFee,
+        scenario_count: scenarioRows.length,
+        price_point_count: mode === "price_range_rate_enumeration" ? scenarioRows.length : "",
+        unique_applied_rate_count: uniqueCount(scenarioRows.map(row => row.applied_rate)),
+        all_referral_fees_local_currency: numericFees.length ? uniqueJoined(scenarioRows.map(row => row.referral_fee_local_currency)) : "待售价",
+        min_referral_fee_local_currency: numericFees.length ? formatMoney(Math.min(...numericFees)) : "待售价",
+        max_referral_fee_local_currency: numericFees.length ? formatMoney(Math.max(...numericFees)) : "待售价",
+        effective_referral_rates: uniqueJoined(scenarioRows.map(row => row.effective_referral_rate)),
+        net_after_referral_local_currency: numericFees.length ? uniqueJoined(scenarioRows.map(row => row.net_after_referral_local_currency)) : "待售价",
+        minimum_triggered: uniqueJoined(scenarioRows.map(row => row.minimum_triggered)),
+        cheapest_scenario: cheapest ? `${cheapest.price_condition} / ${cheapest.applied_rate}` : "",
+        highest_scenario: highest ? `${highest.price_condition} / ${highest.applied_rate}` : "",
+        scenario_formulas: uniqueJoined(scenarioRows.map(row => row.formula)),
+        fee_base_definition: marketplace.feeBaseDefinition,
+        fee_base_status: marketplace.feeBaseStatus,
+        rule_source_url: marketplace.source,
+        notes: [
+          hasPrice(input) ? "已按输入售价计算佣金金额" : "售价留空时穷举该佣金类目佣金率场景",
+          first.note || ""
+        ].filter(Boolean).join("；")
+      };
+    }
+
+    function calculateSkuResult(input) {
+      if (!hasPrice(input)) return aggregateSkuResult(input, enumerateRateScenarios(input), "rate_scenario_enumeration");
+      return aggregateSkuResult(input, [calculateReferral(input)], "priced_calculation");
+    }
+
+    function formInput() {
+      return {
+        country: document.getElementById("country").value,
+        sku: document.getElementById("sku").value,
+        category: document.getElementById("category").value,
+        itemPrice: document.getElementById("itemPrice").value,
+        minimumFee: document.getElementById("minimumFee").value
+      };
+    }
+
+    function renderCountryOptions() {
+      const country = document.getElementById("country");
+      country.innerHTML = Object.keys(MARKETPLACES)
+        .map(code => `<option value="${escapeHtml(code)}">${escapeHtml(code)}</option>`)
+        .join("");
+      country.value = currentMarketplace;
+    }
+
+    function renderCategoryOptions() {
+      const category = document.getElementById("category");
+      const current = category.value;
+      const marketplace = getMarketplace(currentMarketplace);
+      const activeRules = getRulesForMarketplace(currentMarketplace);
+      if (!activeRules.length) {
+        category.innerHTML = `<option value="">${escapeHtml(marketplace.label)} 费率表待录入</option>`;
+        category.value = "";
+        return;
+      }
+      category.innerHTML = activeRules.map(rule => `<option value="${escapeHtml(rule.id)}">${escapeHtml(rule.name)}</option>`).join("");
+      if (activeRules.some(rule => rule.id === current)) {
+        category.value = current;
+      } else if (activeRules.some(rule => rule.id === "home_kitchen")) {
+        category.value = "home_kitchen";
+      }
+    }
+
+    function updateMarketplaceUi() {
+      const marketplace = getMarketplace(currentMarketplace);
+      rules = structuredClone(marketplace.rules || []);
+      const minimumInput = document.getElementById("minimumFee");
+      minimumInput.value = marketplace.defaultMinimum === "" ? "" : marketplace.defaultMinimum;
+      document.getElementById("ruleStatus").value = marketplace.status === "enabled" ? "已启用" : "待录入费率表";
+      renderCategoryOptions();
+      renderRules();
+      renderSourceStatus();
+    }
+
+    function renderRules() {
+      document.getElementById("ruleEditor").value = JSON.stringify(rules, null, 2);
+    }
+
+    function renderSourceStatus() {
+      const el = document.getElementById("sourceStatus");
+      if (!el) return;
+      el.innerHTML = Object.entries(MARKETPLACES).map(([code, item]) => {
+        const status = item.status === "enabled" ? "已启用计算" : "来源已登记，费率表待录入";
+        return `${code}：${status}；<a href="${escapeHtml(item.source)}" target="_blank" rel="noreferrer">${escapeHtml(item.source)}</a>`;
+      }).join("<br>");
+      renderFeeBaseComparison();
+    }
+
+    function feeBaseBreakdown(code) {
+      const commonToolInput = "当前输入 sale price / your price；运费、礼品包装和其它费用默认按 0 处理";
+      const rows = {
+        US: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "未列明",
+          tax_treatment: "不含由 Amazon tax calculation services 计算的税",
+          tool_input_basis: commonToolInput
+        },
+        CA: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "未列明",
+          tax_treatment: "不含通过亚马逊税务计算服务计算得出的税费",
+          tool_input_basis: commonToolInput
+        },
+        MX: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "未列明",
+          tax_treatment: "买家支付税费计入单件商品总销售价格；本工具费率按含增值税列录入",
+          tool_input_basis: "当前输入 sale price / your price；如要模拟含运费、礼品包装或买家税费的分母，需要并入输入价格"
+        },
+        UK: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        DE: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        FR: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        IT: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        ES: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        NL: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "来源页指向欧洲销售佣金计算方法；本工具不单独拆税",
+          tool_input_basis: commonToolInput
+        },
+        SA: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "不含通过 Amazon tax calculation services 计算的税",
+          tool_input_basis: commonToolInput
+        },
+        AE: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "计入",
+          tax_treatment: "不含通过 Amazon tax calculation services 计算的税",
+          tool_input_basis: commonToolInput
+        },
+        AU: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "未列明",
+          tax_treatment: "当前工具不对税费单独调整；按来源页 total sales price 口径测算",
+          tool_input_basis: commonToolInput
+        },
+        JP: {
+          item_price: "计入",
+          buyer_shipping: "计入",
+          gift_wrap: "计入",
+          other_fees: "未列明",
+          tax_treatment: "买家为每件商品支付的适用税费计入",
+          tool_input_basis: "当前输入 sale price / your price；如要模拟运费、礼品包装或适用税费的分母，需要并入输入价格"
+        }
+      };
+      return rows[code] || {
+        item_price: "待确认",
+        buyer_shipping: "待确认",
+        gift_wrap: "待确认",
+        other_fees: "待确认",
+        tax_treatment: "待确认",
+        tool_input_basis: commonToolInput
+      };
+    }
+
+    function renderFeeBaseComparison() {
+      const table = document.getElementById("feeBaseTable");
+      if (!table) return;
+      const headers = [
+        "country", "currency", "fee_base_status", "item_price", "buyer_shipping",
+        "gift_wrap", "other_fees", "tax_treatment", "tool_input_basis",
+        "official_denominator_definition", "source_url"
+      ];
+      const rows = Object.entries(MARKETPLACES).map(([code, item]) => ({
+        country: code,
+        currency: item.currency,
+        fee_base_status: item.feeBaseStatus,
+        ...feeBaseBreakdown(code),
+        official_denominator_definition: item.feeBaseDefinition,
+        source_url: item.source
+      }));
+      table.innerHTML = `
+        <thead><tr>${headers.map(header => `<th class="${["tax_treatment", "tool_input_basis", "official_denominator_definition", "source_url"].includes(header) ? "wrap" : ""}">${escapeHtml(header)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map(row => `<tr>${headers.map(header => `<td class="${["tax_treatment", "tool_input_basis", "official_denominator_definition", "source_url"].includes(header) ? "wrap" : ""}">${header === "source_url" ? `<a href="${escapeHtml(row[header])}" target="_blank" rel="noreferrer">${escapeHtml(row[header])}</a>` : escapeHtml(row[header])}</td>`).join("")}</tr>`).join("")}</tbody>
+      `;
+    }
+
+    function renderSummary(rows) {
+      if (!rows.length) {
+        document.getElementById("summary").innerHTML = "";
+        return;
+      }
+      const numericFees = rows
+        .map(row => safeNumber(row.min_referral_fee_local_currency, NaN))
+        .filter(Number.isFinite);
+      const numericRates = rows
+        .flatMap(row => String(row.applied_referral_rates || "").split(","))
+        .map(value => safeNumber(String(value).replace("%", ""), NaN))
+        .filter(Number.isFinite);
+      const minFeeCount = rows.filter(row => String(row.minimum_triggered).includes("YES")).length;
+      const best = numericFees.length
+        ? rows.reduce((winner, row) => safeNumber(row.min_referral_fee_local_currency, Infinity) < safeNumber(winner.min_referral_fee_local_currency, Infinity) ? row : winner, rows[0])
+        : null;
+      const summary = [
+        { label: "SKU 行数", value: rows.length, tone: "" },
+        { label: "最低佣金触发", value: minFeeCount, tone: minFeeCount ? "bad" : "good" },
+        { label: numericFees.length ? "最低佣金" : "当前模式", value: best ? `${best.category_name} / ${best.min_referral_fee_local_currency} ${best.currency}` : "佣金率场景", tone: "good" },
+        { label: numericRates.length ? "平均适用佣金率" : "佣金率", value: numericRates.length ? `${round2(numericRates.reduce((sum, rate) => sum + rate, 0) / numericRates.length).toFixed(2)}%` : "待售价", tone: "" }
+      ];
+      document.getElementById("summary").innerHTML = summary.map(item => `
+        <div class="metric ${item.tone}">
+          <strong>${escapeHtml(item.value)}</strong>
+          <span>${escapeHtml(item.label)}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderTable(rows) {
+      const table = document.getElementById("resultTable");
+      if (!rows.length) {
+        table.innerHTML = "<tbody><tr><td>暂无结果。</td></tr></tbody>";
+        return;
+      }
+      const headers = [
+        "country", "currency", "sku", "category_name", "status", "calculation_mode", "item_price_local_currency", "price_band",
+        "price_conditions", "applied_referral_rates", "rate_rule", "minimum_referral_fee_local_currency",
+        "scenario_count", "price_point_count", "unique_applied_rate_count", "all_referral_fees_local_currency", "min_referral_fee_local_currency", "max_referral_fee_local_currency",
+        "effective_referral_rates", "net_after_referral_local_currency", "minimum_triggered",
+        "cheapest_scenario", "highest_scenario", "scenario_formulas", "fee_base_definition", "fee_base_status", "rule_source_url", "notes"
+      ];
+      const wrapHeaders = ["price_conditions", "rate_rule", "effective_referral_rates", "net_after_referral_local_currency", "cheapest_scenario", "highest_scenario", "scenario_formulas", "fee_base_definition", "rule_source_url", "notes"];
+      const thead = `<thead><tr>${headers.map(header => `<th class="${wrapHeaders.includes(header) ? "wrap" : ""}">${escapeHtml(header)}</th>`).join("")}</tr></thead>`;
+      const tbody = `<tbody>${rows.map(row => `<tr>${headers.map(header => {
+        const value = row[header] ?? "";
+        const cls = header === "minimum_triggered" && String(value).includes("YES") ? "loss" : (header === "minimum_triggered" ? "gain" : "");
+        const wrap = wrapHeaders.includes(header) ? "wrap" : "";
+        return `<td class="${cls} ${wrap}">${escapeHtml(value)}</td>`;
+      }).join("")}</tr>`).join("")}</tbody>`;
+      table.innerHTML = thead + tbody;
+    }
+
+    function renderResults(rows, hint) {
+      resultRows = rows;
+      renderSummary(rows);
+      renderTable(rows);
+      document.getElementById("resultHint").textContent = hint;
+    }
+
+    function runSingle() {
+      const input = formInput();
+      const row = calculateSkuResult(input);
+      renderResults([row], hasPrice(input)
+        ? `${row.sku} 已按售价 ${row.item_price_local_currency} ${row.currency} 计算佣金。`
+        : `${row.sku} 售价留空，已在一行内汇总 ${row.scenario_count} 个佣金率场景。`);
+      setStatus(hasPrice(input)
+        ? `已计算 ${row.sku}：佣金 ${row.min_referral_fee_local_currency} ${row.currency}。`
+        : `佣金率场景穷举完成：${row.scenario_count} 个场景，汇总为 1 行。`);
+      switchTab("results");
+    }
+
+    function runRange() {
+      const start = safeNumber(document.getElementById("priceStart").value, 0);
+      const end = safeNumber(document.getElementById("priceEnd").value, 0);
+      const step = safeNumber(document.getElementById("priceStep").value, 1);
+      if (step <= 0 || end < start) throw new Error("价格范围或价格间隔不正确。");
+      if (Math.floor((end - start) / step) > 5000) throw new Error("价格点过多，请调大价格间隔或缩小区间。");
+      const input = formInput();
+      const scenarioRows = [];
+      for (let price = start; price <= end + 1e-9; price += step) {
+        scenarioRows.push(calculateReferral({ ...input, itemPrice: price }));
+      }
+      const row = aggregateSkuResult(
+        { ...input, itemPrice: "" },
+        scenarioRows.map((row, index) => ({ ...row, price_condition: `$${formatMoney(start + index * step)}` })),
+        "price_range_rate_enumeration"
+      );
+      row.item_price_local_currency = "";
+      row.price_band = `${formatMoney(start)} - ${formatMoney(end)} ${row.currency} / 价格间隔 ${formatMoney(step)}`;
+      row.price_conditions = `价格范围内扫描 ${scenarioRows.length} 个价格点`;
+      row.notes = `${row.notes}；价格范围内出现 ${row.unique_applied_rate_count} 种适用佣金率：${row.applied_referral_rates}`;
+      renderResults([row], `已按 ${row.category_name} 在价格范围内穷举佣金率，并汇总为 1 行。`);
+      setStatus(`价格范围佣金率穷举完成：${scenarioRows.length} 个价格点，${row.unique_applied_rate_count} 种适用佣金率。`);
+      switchTab("results");
+    }
+
+    function runRateList() {
+      const input = formInput();
+      const row = aggregateSkuResult({ ...input, itemPrice: "" }, enumerateRateScenarios(input), "rate_scenario_enumeration");
+      renderResults([row], `${row.category_name} 佣金率场景已汇总为 1 行。`);
+      setStatus(`佣金率场景穷举完成：${row.scenario_count} 个场景，汇总为 1 行。`);
+      switchTab("results");
+    }
+
+    function buildHeaderMap(headers) {
+      const map = {};
+      headers.forEach((header, index) => { map[String(header || "").trim().toLowerCase()] = index; });
+      return map;
+    }
+
+    function parseBatch(text) {
+      const rows = parseCsv(text);
+      if (rows.length < 2) throw new Error("CSV 至少需要表头和一行数据。");
+      const headerMap = buildHeaderMap(rows[0]);
+      return rows.slice(1).map(values => {
+        const raw = {};
+        Object.keys(headerMap).forEach(header => { raw[header] = values[headerMap[header]] ?? ""; });
+        return calculateSkuResult(raw);
+      });
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === name));
+      document.querySelectorAll(".tab-panel").forEach(panel => { panel.hidden = panel.id !== `tab-${name}`; });
+    }
+
+    document.getElementById("runSingle").addEventListener("click", () => {
+      try { runSingle(); } catch (error) { setStatus(error.message, true); }
+    });
+
+    document.getElementById("runRange").addEventListener("click", () => {
+      try { runRange(); } catch (error) { setStatus(error.message, true); }
+    });
+
+    document.getElementById("runRateList").addEventListener("click", () => {
+      try { runRateList(); } catch (error) { setStatus(error.message, true); }
+    });
+
+    document.getElementById("country").addEventListener("change", () => {
+      currentMarketplace = document.getElementById("country").value;
+      updateMarketplaceUi();
+      const marketplace = getMarketplace(currentMarketplace);
+      setStatus(marketplace.status === "enabled"
+        ? `已切换到 ${marketplace.code}。`
+        : `已切换到 ${marketplace.code}：来源已登记，费率表待录入。`);
+    });
+
+    document.getElementById("batchFile").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const csvText = await readBatchFile(file);
+        document.getElementById("batchInput").value = csvText;
+        setStatus(`已读取 ${file.name}，请确认预览后点击“批量计算”。`);
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("runBatch").addEventListener("click", () => {
+      try {
+        const rows = parseBatch(document.getElementById("batchInput").value);
+        renderResults(rows, `批量计算完成：${rows.length} 行。`);
+        setStatus(`批量计算完成：${rows.length} 行。`);
+        switchTab("results");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("loadExample").addEventListener("click", () => {
+      const rows = EXAMPLE_ROWS.map(values => {
+        const row = {};
+        TEMPLATE_HEADERS.forEach((header, index) => { row[header] = values[index]; });
+        return row;
+      });
+      document.getElementById("batchInput").value = toCsv(rows, TEMPLATE_HEADERS);
+      setStatus("已载入批量示例。");
+    });
+
+    document.getElementById("downloadTemplate").addEventListener("click", () => {
+      const rows = EXAMPLE_ROWS.map(values => {
+        const row = {};
+        TEMPLATE_HEADERS.forEach((header, index) => { row[header] = values[index]; });
+        return row;
+      });
+      downloadText("amazon_referral_fee_template.csv", toCsv(rows, TEMPLATE_HEADERS));
+    });
+
+    document.getElementById("exportResults").addEventListener("click", () => {
+      if (!resultRows.length) {
+        setStatus("暂无结果可导出。", true);
+        return;
+      }
+      downloadText("amazon_referral_fee_results.csv", toCsv(resultRows, Object.keys(resultRows[0])));
+    });
+
+    document.getElementById("applyRules").addEventListener("click", () => {
+      try {
+        const nextRules = JSON.parse(document.getElementById("ruleEditor").value);
+        if (!Array.isArray(nextRules) || !nextRules.length) throw new Error("费率表必须是非空数组。");
+        nextRules.forEach(rule => {
+          if (!rule.id || !rule.name || !rule.mode || !Array.isArray(rule.tiers) || !rule.tiers.length) {
+            throw new Error("每条规则都需要 id、name、mode、tiers。");
+          }
+        });
+        rules = nextRules;
+        MARKETPLACES[currentMarketplace].rules = structuredClone(nextRules);
+        MARKETPLACES[currentMarketplace].status = "enabled";
+        renderCategoryOptions();
+        renderRules();
+        document.getElementById("ruleStatus").value = "已启用";
+        renderSourceStatus();
+        setStatus(`已为 ${getMarketplace(currentMarketplace).label} 应用 ${rules.length} 条费率规则。`);
+      } catch (error) {
+        setStatus(`费率表格式错误：${error.message}`, true);
+      }
+    });
+
+    document.getElementById("resetRules").addEventListener("click", () => {
+      MARKETPLACES[currentMarketplace].rules = structuredClone(INITIAL_MARKETPLACE_RULES[currentMarketplace] ?? []);
+      MARKETPLACES[currentMarketplace].status = INITIAL_MARKETPLACE_STATUS[currentMarketplace] ?? "source_registered_pending_table";
+      updateMarketplaceUi();
+      setStatus(`已恢复 ${getMarketplace(currentMarketplace).label} 默认费率表状态。`);
+    });
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    });
+
+    renderCountryOptions();
+    updateMarketplaceUi();
+    renderTable([]);
+  </script>
+</body>
+</html>
