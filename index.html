@@ -430,7 +430,7 @@
           <div class="panel-head">
             <div>
               <h2>批量导入</h2>
-              <p class="hint">CSV 表头：country, sku, category, item_price, minimum_referral_fee。category 填 Amazon referral fee 佣金类目；country 填 US、CA、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP 这类站点缩写；item_price 留空时会输出该佣金类目的佣金率场景。</p>
+              <p class="hint">下载模板包含“填写说明”“填写映射”“批量填写”三个 sheet；实际上传请把“批量填写”sheet 另存为 CSV/TSV。CSV 表头：country, sku, category, item_price, minimum_referral_fee。</p>
             </div>
             <div class="actions">
               <button id="runBatch" type="button">批量计算</button>
@@ -1009,6 +1009,196 @@
       link.download = filename;
       link.click();
       URL.revokeObjectURL(url);
+    }
+
+    function downloadBlob(filename, blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function xmlEscape(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"
+      }[char]));
+    }
+
+    function columnName(index) {
+      let name = "";
+      let current = index + 1;
+      while (current > 0) {
+        const remainder = (current - 1) % 26;
+        name = String.fromCharCode(65 + remainder) + name;
+        current = Math.floor((current - 1) / 26);
+      }
+      return name;
+    }
+
+    function worksheetXml(rows) {
+      const sheetRows = rows.map((row, rowIndex) => {
+        const cells = row.map((value, colIndex) => {
+          const ref = `${columnName(colIndex)}${rowIndex + 1}`;
+          return `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(value)}</t></is></c>`;
+        }).join("");
+        return `<row r="${rowIndex + 1}">${cells}</row>`;
+      }).join("");
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`;
+    }
+
+    function crc32(bytes) {
+      const table = crc32.table || (crc32.table = Array.from({ length: 256 }, (_, index) => {
+        let value = index;
+        for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+        return value >>> 0;
+      }));
+      let crc = 0xffffffff;
+      for (const byte of bytes) crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function writeUint16(buffer, offset, value) {
+      buffer[offset] = value & 0xff;
+      buffer[offset + 1] = (value >>> 8) & 0xff;
+    }
+
+    function writeUint32(buffer, offset, value) {
+      buffer[offset] = value & 0xff;
+      buffer[offset + 1] = (value >>> 8) & 0xff;
+      buffer[offset + 2] = (value >>> 16) & 0xff;
+      buffer[offset + 3] = (value >>> 24) & 0xff;
+    }
+
+    function concatUint8(parts) {
+      const total = parts.reduce((sum, part) => sum + part.length, 0);
+      const output = new Uint8Array(total);
+      let offset = 0;
+      parts.forEach(part => {
+        output.set(part, offset);
+        offset += part.length;
+      });
+      return output;
+    }
+
+    function zipStore(files) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+      files.forEach(file => {
+        const nameBytes = encoder.encode(file.name);
+        const dataBytes = encoder.encode(file.content);
+        const crc = crc32(dataBytes);
+        const local = new Uint8Array(30 + nameBytes.length + dataBytes.length);
+        writeUint32(local, 0, 0x04034b50);
+        writeUint16(local, 4, 20);
+        writeUint16(local, 6, 0);
+        writeUint16(local, 8, 0);
+        writeUint16(local, 10, 0);
+        writeUint16(local, 12, 0);
+        writeUint32(local, 14, crc);
+        writeUint32(local, 18, dataBytes.length);
+        writeUint32(local, 22, dataBytes.length);
+        writeUint16(local, 26, nameBytes.length);
+        writeUint16(local, 28, 0);
+        local.set(nameBytes, 30);
+        local.set(dataBytes, 30 + nameBytes.length);
+        localParts.push(local);
+
+        const central = new Uint8Array(46 + nameBytes.length);
+        writeUint32(central, 0, 0x02014b50);
+        writeUint16(central, 4, 20);
+        writeUint16(central, 6, 20);
+        writeUint16(central, 8, 0);
+        writeUint16(central, 10, 0);
+        writeUint16(central, 12, 0);
+        writeUint16(central, 14, 0);
+        writeUint32(central, 16, crc);
+        writeUint32(central, 20, dataBytes.length);
+        writeUint32(central, 24, dataBytes.length);
+        writeUint16(central, 28, nameBytes.length);
+        writeUint16(central, 30, 0);
+        writeUint16(central, 32, 0);
+        writeUint16(central, 34, 0);
+        writeUint16(central, 36, 0);
+        writeUint32(central, 38, 0);
+        writeUint32(central, 42, offset);
+        central.set(nameBytes, 46);
+        centralParts.push(central);
+        offset += local.length;
+      });
+      const centralOffset = offset;
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+      const end = new Uint8Array(22);
+      writeUint32(end, 0, 0x06054b50);
+      writeUint16(end, 8, files.length);
+      writeUint16(end, 10, files.length);
+      writeUint32(end, 12, centralSize);
+      writeUint32(end, 16, centralOffset);
+      return concatUint8([...localParts, ...centralParts, end]);
+    }
+
+    function workbookXml(sheetNames) {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetNames.map((name, index) => `<sheet name="${xmlEscape(name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("")}</sheets></workbook>`;
+    }
+
+    function workbookRelsXml(sheetNames) {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheetNames.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join("")}</Relationships>`;
+    }
+
+    function contentTypesXml(sheetNames) {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheetNames.map((_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`;
+    }
+
+    function createXlsxBlob(sheets) {
+      const sheetNames = sheets.map(sheet => sheet.name);
+      const files = [
+        { name: "[Content_Types].xml", content: contentTypesXml(sheetNames) },
+        { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+        { name: "xl/workbook.xml", content: workbookXml(sheetNames) },
+        { name: "xl/_rels/workbook.xml.rels", content: workbookRelsXml(sheetNames) },
+        ...sheets.map((sheet, index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, content: worksheetXml(sheet.rows) }))
+      ];
+      return new Blob([zipStore(files)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+
+    function buildTemplateWorkbook() {
+      const exampleRows = EXAMPLE_ROWS.map(values => TEMPLATE_HEADERS.map((_, index) => values[index] ?? ""));
+      return createXlsxBlob([
+        {
+          name: "填写说明",
+          rows: [
+            ["亚马逊佣金率穷举测算器 - 批量导入模板"],
+            ["使用步骤", "1. 在“批量填写”sheet 填写 SKU 数据；2. 将该 sheet 另存为 CSV/TSV；3. 回到网页批量导入上传。"],
+            ["站点代码", "US、CA、MX、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP。大小写均可。"],
+            ["佣金类目", "category 是 Amazon referral fee 佣金类目，不是前台 browse node。可填费率表里的 id 或佣金类目名称。"],
+            ["售价", "item_price 填有效 sale price / your price；留空时输出该佣金类目的佣金率场景。"],
+            ["最低佣金", "minimum_referral_fee 可留空，留空时按站点和佣金类目的默认最低佣金。"],
+            ["分母口径", "买家支付运费、礼品包装、其它费用和税费是否计入，请看网页“口径”页。当前批量输入默认只填商品售价。"]
+          ]
+        },
+        {
+          name: "填写映射",
+          rows: [
+            ["字段名", "必填", "填写内容", "示例", "说明"],
+            ["country", "是", "站点代码", "US", "支持 US/CA/MX/UK/DE/FR/IT/ES/NL/SA/AE/AU/JP；可小写。"],
+            ["sku", "是", "SKU 或自定义识别码", "SKU-001", "结果表按该字段识别单个 SKU。"],
+            ["category", "是", "Amazon referral fee 佣金类目", "home_kitchen", "可填 id 或佣金类目名称；不同站点类目不同。"],
+            ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"],
+            ["minimum_referral_fee", "否", "每件最低佣金", "0.30", "留空时使用规则默认值；金额按站点原币。"]
+          ]
+        },
+        {
+          name: "批量填写",
+          rows: [TEMPLATE_HEADERS, ...exampleRows]
+        }
+      ]);
     }
 
     function setStatus(message, isError = false) {
@@ -1671,12 +1861,7 @@
     });
 
     document.getElementById("downloadTemplate").addEventListener("click", () => {
-      const rows = EXAMPLE_ROWS.map(values => {
-        const row = {};
-        TEMPLATE_HEADERS.forEach((header, index) => { row[header] = values[index]; });
-        return row;
-      });
-      downloadText("amazon_referral_fee_template.csv", toCsv(rows, TEMPLATE_HEADERS));
+      downloadBlob("amazon_referral_fee_batch_template.xlsx", buildTemplateWorkbook());
     });
 
     document.getElementById("exportResults").addEventListener("click", () => {
@@ -1685,6 +1870,27 @@
         return;
       }
       downloadText("amazon_referral_fee_results.csv", toCsv(resultRows, Object.keys(resultRows[0])));
+    });
+
+    window.addEventListener("message", event => {
+      const message = event.data || {};
+      if (message.type !== "amazon:referral:calculate") return;
+      try {
+        const rows = parseBatch(message.csv || "");
+        event.source?.postMessage({
+          type: "amazon:referral:calculate:result",
+          requestId: message.requestId,
+          ok: true,
+          results: rows
+        }, "*");
+      } catch (error) {
+        event.source?.postMessage({
+          type: "amazon:referral:calculate:result",
+          requestId: message.requestId,
+          ok: false,
+          error: error.message
+        }, "*");
+      }
     });
 
     document.getElementById("applyRules").addEventListener("click", () => {
