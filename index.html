@@ -302,11 +302,6 @@
     .gain { color: var(--good); font-weight: 750; }
     .loss { color: var(--danger); font-weight: 750; }
 
-    .rule-editor {
-      min-height: 380px;
-      white-space: pre;
-    }
-
     .status {
       margin-top: 12px;
       padding: 12px 14px;
@@ -487,15 +482,16 @@
           <div class="panel-head">
             <div>
               <h2>费率表</h2>
-              <p class="hint">可直接编辑 JSON 后应用。mode 为 tiered_portion 表示超额分段，mode 为 whole_order_threshold 表示按总销售金额所在价格段整单计费。</p>
+              <p class="hint">按当前站点展示 Amazon referral fee 佣金类目、规则类型、最低佣金和费率结构。整价跳档表示整单按售价所在价格段计费，边际分段表示超过阈值的部分单独计费。</p>
             </div>
             <div class="actions">
-              <button id="applyRules" type="button">应用费率表</button>
               <button id="resetRules" class="secondary" type="button">恢复默认</button>
             </div>
           </div>
           <div class="panel-body">
-            <textarea id="ruleEditor" class="rule-editor" spellcheck="false"></textarea>
+            <div class="table-wrap">
+              <table id="ruleTable"></table>
+            </div>
           </div>
         </section>
 
@@ -1558,7 +1554,33 @@
     }
 
     function renderRules() {
-      document.getElementById("ruleEditor").value = JSON.stringify(rules, null, 2);
+      const table = document.getElementById("ruleTable");
+      if (!table) return;
+      if (!rules.length) {
+        table.innerHTML = "<tbody><tr><td>当前站点费率表待录入。</td></tr></tbody>";
+        return;
+      }
+      const modeLabels = {
+        flat: "固定费率",
+        whole_order_threshold: "整价跳档",
+        tiered_portion: "边际分段",
+        hybrid_threshold_portion: "混合分段"
+      };
+      const headers = ["category_id", "佣金类目", "规则类型", "最低佣金", "费率结构", "别名", "备注"];
+      const rows = rules.map(rule => ({
+        category_id: rule.id,
+        "佣金类目": rule.name,
+        "规则类型": modeLabels[rule.mode] || rule.mode,
+        "最低佣金": `${formatMoney(rule.minimum ?? getMarketplace(currentMarketplace).defaultMinimum ?? 0)} ${getMarketplace(currentMarketplace).currency}`,
+        "费率结构": rateLabel(rule),
+        "别名": (rule.aliases || []).join(", "),
+        "备注": rule.note || ""
+      }));
+      const wrapHeaders = ["佣金类目", "费率结构", "别名", "备注"];
+      table.innerHTML = `
+        <thead><tr>${headers.map(header => `<th class="${wrapHeaders.includes(header) ? "wrap" : ""}">${escapeHtml(header)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map(row => `<tr>${headers.map(header => `<td class="${wrapHeaders.includes(header) ? "wrap" : ""}">${escapeHtml(row[header])}</td>`).join("")}</tr>`).join("")}</tbody>
+      `;
     }
 
     function renderSourceStatus() {
@@ -1925,28 +1947,6 @@
           ok: false,
           error: error.message
         }, "*");
-      }
-    });
-
-    document.getElementById("applyRules").addEventListener("click", () => {
-      try {
-        const nextRules = JSON.parse(document.getElementById("ruleEditor").value);
-        if (!Array.isArray(nextRules) || !nextRules.length) throw new Error("费率表必须是非空数组。");
-        nextRules.forEach(rule => {
-          if (!rule.id || !rule.name || !rule.mode || !Array.isArray(rule.tiers) || !rule.tiers.length) {
-            throw new Error("每条规则都需要 id、name、mode、tiers。");
-          }
-        });
-        rules = nextRules;
-        MARKETPLACES[currentMarketplace].rules = structuredClone(nextRules);
-        MARKETPLACES[currentMarketplace].status = "enabled";
-        renderCategoryOptions();
-        renderRules();
-        document.getElementById("ruleStatus").value = "已启用";
-        renderSourceStatus();
-        setStatus(`已为 ${getMarketplace(currentMarketplace).label} 应用 ${rules.length} 条费率规则。`);
-      } catch (error) {
-        setStatus(`费率表格式错误：${error.message}`, true);
       }
     });
 
