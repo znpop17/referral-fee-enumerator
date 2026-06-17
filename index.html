@@ -1978,10 +1978,12 @@
       const input = document.getElementById("accessPassword");
       const error = document.getElementById("authError");
       const password = input.value.trim();
-      const passwordHash = await sha256Hex(password);
-      if (passwordHash === ACCESS_PASSWORD_HASH || password === ACCESS_PASSWORD_FALLBACK) {
-        sessionStorage.setItem("referralFeeAccessGranted", "1");
+      const passwordHash = password === ACCESS_PASSWORD_FALLBACK ? ACCESS_PASSWORD_HASH : await sha256Hex(password);
+      if (password === ACCESS_PASSWORD_FALLBACK || passwordHash === ACCESS_PASSWORD_HASH) {
         showApp();
+        try {
+          sessionStorage.setItem("referralFeeAccessGranted", "1");
+        } catch {}
       } else {
         error.textContent = "密码不正确。";
         input.select();
