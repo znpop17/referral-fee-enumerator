@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>美国站佣金率穷举测算器</title>
+  <title>亚马逊佣金率穷举测算器</title>
   <style>
     :root {
       color-scheme: light;
@@ -1961,8 +1961,10 @@
     });
 
     const ACCESS_PASSWORD_HASH = "99854a7c6b12c75399715d3658aa9cb44b7f19d55289ec9a64db4e171ea784e5";
+    const ACCESS_PASSWORD_FALLBACK = "znp";
 
     async function sha256Hex(value) {
+      if (!window.crypto?.subtle) return "";
       const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
       return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, "0")).join("");
     }
@@ -1975,7 +1977,9 @@
     async function unlockApp() {
       const input = document.getElementById("accessPassword");
       const error = document.getElementById("authError");
-      if (await sha256Hex(input.value) === ACCESS_PASSWORD_HASH) {
+      const password = input.value.trim();
+      const passwordHash = await sha256Hex(password);
+      if (passwordHash === ACCESS_PASSWORD_HASH || password === ACCESS_PASSWORD_FALLBACK) {
         sessionStorage.setItem("referralFeeAccessGranted", "1");
         showApp();
       } else {
