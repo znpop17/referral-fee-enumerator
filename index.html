@@ -43,6 +43,26 @@
       padding: 24px 18px 42px;
     }
 
+    .auth-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: min(440px, 100%);
+      padding: 28px;
+      border: 1px solid rgba(32, 25, 21, 0.1);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .auth-card h1 { font-size: 26px; }
+    .auth-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+    .auth-error { min-height: 22px; margin-top: 12px; color: var(--danger); font-weight: 700; }
+
     header {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -322,7 +342,21 @@
   </style>
 </head>
 <body>
-  <main>
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <h1>亚马逊佣金率穷举测算器</h1>
+      <p>请输入访问密码。</p>
+      <label>访问密码
+        <input id="accessPassword" type="password" autocomplete="current-password" placeholder="Password">
+      </label>
+      <div class="auth-actions">
+        <button id="unlockApp" type="button">进入工具</button>
+      </div>
+      <div id="authError" class="auth-error"></div>
+    </div>
+  </section>
+
+  <main id="appShell" hidden>
     <header>
       <div>
         <h1>亚马逊佣金率穷举测算器</h1>
@@ -1926,9 +1960,43 @@
       tab.addEventListener("click", () => switchTab(tab.dataset.tab));
     });
 
+    const ACCESS_PASSWORD_HASH = "99854a7c6b12c75399715d3658aa9cb44b7f19d55289ec9a64db4e171ea784e5";
+
+    async function sha256Hex(value) {
+      const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+      return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    function showApp() {
+      document.getElementById("authScreen").hidden = true;
+      document.getElementById("appShell").hidden = false;
+    }
+
+    async function unlockApp() {
+      const input = document.getElementById("accessPassword");
+      const error = document.getElementById("authError");
+      if (await sha256Hex(input.value) === ACCESS_PASSWORD_HASH) {
+        sessionStorage.setItem("referralFeeAccessGranted", "1");
+        showApp();
+      } else {
+        error.textContent = "密码不正确。";
+        input.select();
+      }
+    }
+
+    document.getElementById("unlockApp").addEventListener("click", () => {
+      unlockApp().catch(() => {
+        document.getElementById("authError").textContent = "当前浏览器不支持密码校验，请换用最新版浏览器。";
+      });
+    });
+    document.getElementById("accessPassword").addEventListener("keydown", event => {
+      if (event.key === "Enter") document.getElementById("unlockApp").click();
+    });
+
     renderCountryOptions();
     updateMarketplaceUi();
     renderTable([]);
+    if (sessionStorage.getItem("referralFeeAccessGranted") === "1") showApp();
   </script>
 </body>
 </html>
