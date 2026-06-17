@@ -469,6 +469,7 @@
             <div class="actions">
               <button id="runBatch" type="button">批量计算</button>
               <button id="loadExample" class="secondary" type="button">载入示例</button>
+              <button id="downloadBatchTemplate" class="secondary" type="button">下载模板</button>
             </div>
           </div>
           <div class="panel-body stack">
@@ -1894,9 +1895,12 @@
       setStatus("已载入批量示例。");
     });
 
-    document.getElementById("downloadTemplate").addEventListener("click", () => {
+    function downloadTemplateWorkbook() {
       downloadBlob("amazon_referral_fee_batch_template.xlsx", buildTemplateWorkbook());
-    });
+    }
+
+    document.getElementById("downloadTemplate").addEventListener("click", downloadTemplateWorkbook);
+    document.getElementById("downloadBatchTemplate").addEventListener("click", downloadTemplateWorkbook);
 
     document.getElementById("exportResults").addEventListener("click", () => {
       if (!resultRows.length) {
