@@ -449,7 +449,6 @@
             </div>
             <div class="actions">
               <button id="exportResults" class="secondary" type="button">导出结果 CSV</button>
-              <button id="downloadTemplate" class="secondary" type="button">下载模板</button>
             </div>
           </div>
           <div class="panel-body">
@@ -464,7 +463,7 @@
           <div class="panel-head">
             <div>
               <h2>批量导入</h2>
-              <p class="hint">下载模板包含“填写说明”“填写映射”“批量填写”三个 sheet；实际上传请把“批量填写”sheet 另存为 CSV/TSV。CSV 表头：country, sku, category, item_price, minimum_referral_fee。</p>
+              <p class="hint">下载模板包含“填写说明”“填写映射”“批量填写”三个 sheet；实际上传请把“批量填写”sheet 另存为 CSV/TSV。CSV 表头：country, sku, category, item_price。</p>
             </div>
             <div class="actions">
               <button id="runBatch" type="button">批量计算</button>
@@ -564,12 +563,12 @@
       { id: "everything_else", name: "其他", aliases: ["其他所有类目"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] }
     ];
 
-    const TEMPLATE_HEADERS = ["country", "sku", "category", "item_price", "minimum_referral_fee"];
+    const TEMPLATE_HEADERS = ["country", "sku", "category", "item_price"];
     const EXAMPLE_ROWS = [
-      ["US", "SKU-APPAREL-001", "clothing_accessories", "", "0.30"],
-      ["US", "SKU-BEAUTY-001", "beauty_health_personal_care", "9.99", "0.30"],
-      ["US", "SKU-EA-001", "electronics_accessories", "", "0.30"],
-      ["US", "SKU-HOME-001", "home_kitchen", "24.99", "0.30"]
+      ["US", "SKU-APPAREL-001", "clothing_accessories", ""],
+      ["US", "SKU-BEAUTY-001", "beauty_health_personal_care", "9.99"],
+      ["US", "SKU-EA-001", "electronics_accessories", ""],
+      ["US", "SKU-HOME-001", "home_kitchen", "24.99"]
     ];
 
     const CA_REFERRAL_RULES = [
@@ -1214,7 +1213,7 @@
             ["站点代码", "US、CA、MX、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP。大小写均可。"],
             ["佣金类目", "category 是 Amazon referral fee 佣金类目，不是前台 browse node。可填费率表里的 id 或佣金类目名称。"],
             ["售价", "item_price 填有效 sale price / your price；留空时输出该佣金类目的佣金率场景。"],
-            ["最低佣金", "minimum_referral_fee 可留空，留空时按站点和佣金类目的默认最低佣金。"],
+            ["最低佣金", "批量导入不填写最低佣金，系统按站点和佣金类目的默认最低佣金计算。"],
             ["分母口径", "买家支付运费、礼品包装、其它费用和税费是否计入，请看网页“口径”页。当前批量输入默认只填商品售价。"]
           ]
         },
@@ -1225,8 +1224,7 @@
             ["country", "是", "站点代码", "US", "支持 US/CA/MX/UK/DE/FR/IT/ES/NL/SA/AE/AU/JP；可小写。"],
             ["sku", "是", "SKU 或自定义识别码", "SKU-001", "结果表按该字段识别单个 SKU。"],
             ["category", "是", "Amazon referral fee 佣金类目", "home_kitchen", "可填 id 或佣金类目名称；不同站点类目不同。"],
-            ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"],
-            ["minimum_referral_fee", "否", "每件最低佣金", "0.30", "留空时使用规则默认值；金额按站点原币。"]
+            ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"]
           ]
         },
         {
@@ -1899,7 +1897,6 @@
       downloadBlob("amazon_referral_fee_batch_template.xlsx", buildTemplateWorkbook());
     }
 
-    document.getElementById("downloadTemplate").addEventListener("click", downloadTemplateWorkbook);
     document.getElementById("downloadBatchTemplate").addEventListener("click", downloadTemplateWorkbook);
 
     document.getElementById("exportResults").addEventListener("click", () => {
