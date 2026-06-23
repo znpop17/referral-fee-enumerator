@@ -580,7 +580,7 @@
       ruleFlat("computers", "电脑", 0.08, 0.40),
       ruleFlat("consumer_electronics", "消费类电子产品", 0.08, 0.40),
       ruleTiered("electronics_accessories", "电子产品配件", 100, 0.15, 0.08, 0.40),
-      ruleFlat("everything_else", "其他1", 0.15, 0.40, ["其他"]),
+      ruleFlat("everything_else", "其他", 0.15, 0.40, ["其他"]),
       ruleFlat("extended_warranties", "延长保修、保护计划及服务合约", 0.96, 0),
       ruleFlat("eyewear", "眼镜", 0.17, 0.40),
       ruleFlat("shoes", "鞋靴", 0.15, 0.40),
@@ -607,7 +607,7 @@
     const MX_REFERRAL_RULES = [
       ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.45, 8),
       ruleFlat("baby", "母婴用品", 0.15, 8),
-      ruleFlat("consumer_electronics", "消费类电子产品¹", 0.10, 8, ["消费类电子产品"]),
+      ruleFlat("consumer_electronics", "消费类电子产品", 0.10, 8, ["消费类电子产品"]),
       ruleTiered("electronics_accessories", "电子产品配件", 2000, 0.15, 0.08, 8),
       ruleFlat("furniture", "家具", 0.15, 8),
       ruleFlat("mattresses", "床垫", 0.15, 8),
@@ -618,12 +618,12 @@
       ruleFlat("musical_instruments_av", "乐器和影音制作", 0.15, 8),
       ruleFlat("office_products", "办公用品", 0.10, 8),
       ruleFlat("sports_outdoors", "运动户外", 0.15, 8),
-      ruleFlat("computers", "电脑¹", 0.10, 8, ["电脑"]),
+      ruleFlat("computers", "电脑", 0.10, 8, ["电脑"]),
       ruleFlat("pet_products", "宠物用品", 0.15, 8),
       ruleFlat("tools_home_improvement", "工具和家居装修", 0.15, 8, [], "官方表注明电动工具为 12.0%；如适用请选“基础设备电动工具”。"),
       ruleFlat("base_power_tools", "基础设备电动工具", 0.12, 8),
       ruleWhole("toys_games", "玩具和游戏", 300, 0.08, 0.15, 8),
-      ruleFlat("everything_else", "其他²", 0.15, 8, ["其他"]),
+      ruleFlat("everything_else", "其他", 0.15, 8, ["其他"]),
       ruleFlat("media", "媒介类商品 - 图书、DVD、音乐、软件和视频", 0.15, 8),
       ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.15, 8),
       ruleFlat("video_game_consoles", "视频游戏机", 0.08, 8),
@@ -654,12 +654,12 @@
         ruleFlat("beer_wine_spirits", "啤酒、葡萄酒和烈酒", 0.10, minimum),
         ruleFlat("books", "图书", 0.15, 0),
         ruleFlat("business_industrial_scientific", "商业、工业与科学用品", 0.15, minimum),
-        ruleWhole3("clothing_accessories", "服装和配饰**", 15, 0.05, 20, 0.10, 0.15, minimum, [], primeNote),
+        ruleWhole3("clothing_accessories", "服装和配饰", 15, 0.05, 20, 0.10, 0.15, minimum, [], primeNote),
         ruleFlat("business_electrical_energy", "商业电气和能源用品", 0.12, minimum),
         ruleFlat("small_appliances", "小型电器", 0.15, minimum),
         ruleFlat("computers", "电脑", 0.07, minimum),
         ruleFlat("consumer_electronics", "消费类电子产品", 0.07, minimum),
-        ruleFlat("bicycle_accessories", "自行车配件***", 0.15, minimum),
+        ruleFlat("bicycle_accessories", "自行车配件", 0.15, minimum),
         ruleTiered("electronics_accessories", "电子产品配件", 100, 0.15, 0.08, minimum),
         ruleTiered("printer_scanner_accessories", "打印机和扫描仪配件", 100, 0.15, 0.08, minimum),
         ruleFlat("eyewear", "眼镜", 0.15, minimum),
@@ -668,10 +668,10 @@
         ruleFlat("full_size_appliances", "全尺寸电器", 0.07, minimum),
         ruleTiered("furniture", "家具", furnitureThreshold, 0.15, 0.10, minimum),
         ruleFlat("furniture_accessories", "家具配件", 0.13, minimum),
-        ruleWhole("grocery", "食品*", 10, 0.05, 0.15, 0, ["食品"]),
+        ruleWhole("grocery", "食品", 10, 0.05, 0.15, 0, ["食品"]),
         ruleFlat("amazon_handmade", "Amazon Handmade", 0.12, minimum, ["手工艺品"]),
-        ruleWhole("home_products", "家居用品*", 20, 0.08, 0.15, minimum, ["家居用品"]),
-        ruleFlat("kitchen", "厨房用品*", 0.15, minimum, ["厨房用品"]),
+        ruleWhole("home_products", "家居用品", 20, 0.08, 0.15, minimum, ["家居用品"]),
+        ruleFlat("kitchen", "厨房用品", 0.15, minimum, ["厨房用品"]),
         ruleFlat("home_linens_rugs", "家居亚麻制品和地毯", 0.15, minimum),
         ruleTiered("jewelry", "珠宝首饰", jewelryThreshold, 0.20, 0.05, minimum),
         ruleFlat("lawn_garden", "草坪和园艺", 0.15, minimum),
@@ -683,7 +683,7 @@
         ruleFlat("office_products", "办公用品", 0.15, minimum),
         ruleFlat("packaging_materials", "包装材料", 0.15, minimum),
         ruleFlat("pet_products", "宠物用品", 0.15, minimum),
-        ruleWhole("pet_clothing_food", "宠物服装和食品*", 10, 0.05, 0.15, minimum, ["宠物服装和食品"]),
+        ruleWhole("pet_clothing_food", "宠物服装和食品", 10, 0.05, 0.15, minimum, ["宠物服装和食品"]),
         ruleFlat("software", "软件", 0.15, 0),
         ruleFlat("sports_outdoors", "运动户外", 0.15, minimum),
         ruleFlat("tires", "轮胎", 0.07, minimum),
@@ -693,7 +693,7 @@
         ruleFlat("toys_games", "玩具和游戏", 0.15, minimum),
         ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.15, 0),
         ruleFlat("video_game_consoles", "视频游戏机", 0.08, 0),
-        ruleWhole("vitamins_minerals_supplements", "维生素、矿物质及补充剂*", 10, 0.05, 0.15, minimum, ["维生素、矿物质及补充剂"]),
+        ruleWhole("vitamins_minerals_supplements", "维生素、矿物质及补充剂", 10, 0.05, 0.15, minimum, ["维生素、矿物质及补充剂"]),
         ruleTiered("watches", "钟表", watchesThreshold, 0.15, 0.05, minimum),
         ruleFlat("everything_else", "其他", 0.15, minimum)
       ];
@@ -880,7 +880,7 @@
           ruleWhole("tools_home_improvement", "工具及家居装修", 20, 0.10, 0.13, 0),
           ruleFlat("toys_games", "玩具及游戏", 0.12, 0), ruleFlat("tires", "轮胎", 0.09, 0),
           ruleFlat("video_game_consoles", "视频游戏机", 0.06, 0), ruleFlat("video_games_accessories", "视频游戏及游戏配件", 0.09, 0),
-          ruleTiered("watches", "钟表", 50, 0.12, 0.08, 0), ruleFlat("everything_else", "其他¹", 0.15, 0, ["其他"])
+          ruleTiered("watches", "钟表", 50, 0.12, 0.08, 0), ruleFlat("everything_else", "其他", 0.15, 0, ["其他"])
         ]
       },
       JP: {
@@ -896,7 +896,7 @@
           ruleWhole("consumer_electronics", "消费类电子产品", 750, 0.05, 0.084, 30), ruleWhole("computers", "电脑", 750, 0.05, 0.084, 30),
           ruleWhole("electronics_accessories", "电子产品配件", 750, 0.05, 0.104, 30), ruleFlat("amazon_device_accessories", "亚马逊设备配件", 0.454, 30),
           ruleWhole("musical_instruments_av", "乐器和影音制作", 750, 0.05, 0.104, 30),
-          ruleWhole3("beauty_health_personal_care", "美妆2、个护健康", 750, 0.05, 1500, 0.084, 0.104, 30),
+          ruleWhole3("beauty_health_personal_care", "美妆、个护健康", 750, 0.05, 1500, 0.084, 0.104, 30),
           ...["运动户外","汽车和户外动力设备","轮胎","玩具和游戏"].map((name, i) => ruleWhole(["sports_outdoors","automotive_powersports","tires","toys_games"][i], name, 750, 0.05, 0.104, 30)),
           ruleWhole("video_game_consoles", "视频游戏机", 750, 0.05, 0.084, 30), ruleFlat("video_games_accessories", "视频游戏和游戏配件", 0.154, 0),
           ruleWhole3("pet_products", "宠物用品", 750, 0.05, 1500, 0.084, 0.154, 30),
@@ -910,7 +910,7 @@
           ruleHybrid("eyewear", "眼镜", 750, 0.05, 3000, 0.124, 0.084, 30),
           ruleHybrid("shoes", "鞋靴", 750, 0.05, 7500, 0.124, 0.064, 30),
           ruleHybrid("backpacks_handbags_luggage", "背包、手提包和箱包", 750, 0.05, 7500, 0.124, 0.064, 30),
-          ruleWhole("everything_else", "其他3", 750, 0.05, 0.154, 30, ["其他"])
+          ruleWhole("everything_else", "其他", 750, 0.05, 0.154, 30, ["其他"])
         ]
       }
     };
