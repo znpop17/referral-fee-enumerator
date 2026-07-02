@@ -347,6 +347,7 @@
       <div class="auth-actions">
         <button id="unlockApp" type="button">进入工具</button>
       </div>
+      <p class="hint">输入密码后下滑查看测算工具。</p>
       <div id="authError" class="auth-error"></div>
     </div>
   </section>
@@ -1973,6 +1974,7 @@
     function showApp() {
       document.getElementById("authScreen").hidden = true;
       document.getElementById("appShell").hidden = false;
+      document.getElementById("appShell").scrollIntoView({ block: "start" });
     }
 
     async function unlockApp() {
