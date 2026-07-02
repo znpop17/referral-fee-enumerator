@@ -393,6 +393,12 @@
             <label>最低佣金
               <input id="minimumFee" type="number" min="0" step="any" value="0.30">
             </label>
+            <label>积分抵扣金额（JP，可选）
+              <input id="pointsAmount" type="number" min="0" step="any" placeholder="日本站实际计算可填">
+            </label>
+          </div>
+
+          <div class="grid">
             <label>规则状态
               <input id="ruleStatus" readonly>
             </label>
@@ -459,7 +465,7 @@
           <div class="panel-head">
             <div>
               <h2>批量导入</h2>
-              <p class="hint">下载模板包含“填写说明”“填写映射”“批量填写”三个 sheet；实际上传请把“批量填写”sheet 另存为 CSV/TSV。CSV 表头：country, sku, category, item_price。</p>
+              <p class="hint">下载模板包含“填写说明”“填写映射”“批量填写”三个 sheet；实际上传请把“批量填写”sheet 另存为 CSV/TSV。CSV 表头：country, sku, category, item_price, points。</p>
             </div>
             <div class="actions">
               <button id="runBatch" type="button">批量计算</button>
@@ -508,7 +514,7 @@
             <div class="table-wrap">
               <table id="feeBaseTable"></table>
             </div>
-            <div class="notice">本工具的定价输入默认填写 Amazon 上有效的 sale price / your price，等同于假设买家支付运费、礼品包装费和其它费用为 0。若后续要测 FBM 运费收费场景，可以把运费加进商品售价一起测。</div>
+            <div class="notice">本工具的定价输入默认填写 Amazon 上有效的 sale price / your price，等同于假设买家支付运费、礼品包装费和其它费用为 0。日本站可额外填写积分抵扣金额，系统会从佣金计算分母中扣除；若后续要测 FBM 运费收费场景，可以把运费加进商品售价一起测。</div>
             <div class="notice">多数类目存在每件最低 referral fee；金额按所选站点原币计算。如果按比例计算的佣金小于最低值，本工具会取最低佣金，并展示最低佣金是否触发。</div>
             <div class="notice" id="sourceStatus"></div>
           </div>
@@ -560,12 +566,12 @@
       { id: "everything_else", name: "其他", aliases: ["其他所有类目"], mode: "flat", minimum: 0.30, tiers: [{ rate: 0.15 }] }
     ];
 
-    const TEMPLATE_HEADERS = ["country", "sku", "category", "item_price"];
+    const TEMPLATE_HEADERS = ["country", "sku", "category", "item_price", "points"];
     const EXAMPLE_ROWS = [
-      ["US", "SKU-APPAREL-001", "clothing_accessories", ""],
-      ["US", "SKU-BEAUTY-001", "beauty_health_personal_care", "9.99"],
-      ["US", "SKU-EA-001", "electronics_accessories", ""],
-      ["US", "SKU-HOME-001", "home_kitchen", "24.99"]
+      ["US", "SKU-APPAREL-001", "clothing_accessories", "", ""],
+      ["US", "SKU-BEAUTY-001", "beauty_health_personal_care", "9.99", ""],
+      ["JP", "SKU-JP-BEAUTY-001", "beauty_health_personal_care", "1980", "100"],
+      ["US", "SKU-HOME-001", "home_kitchen", "24.99", ""]
     ];
 
     const CA_REFERRAL_RULES = [
@@ -890,8 +896,9 @@
         source: "https://sellercentral-japan.amazon.com/help/hub/reference/external/G200336920#wjz_cjc_jcb",
         status: "enabled",
         feeBaseStatus: "confirmed",
-        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家为每件商品支付的适用税费",
+        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家为每件商品支付的适用税费；日本站实际结算中积分抵扣会影响佣金计算分母，佣金金额计算后按 JPY 取整",
         defaultMinimum: 30,
+        feeRounding: "integer",
         rules: [
           ruleFlat("media", "媒介类商品 - 图书、DVD、音乐、软件、视频", 0.154, 0),
           ruleWhole("consumer_electronics", "消费类电子产品", 750, 0.05, 0.084, 30), ruleWhole("computers", "电脑", 750, 0.05, 0.084, 30),
@@ -962,6 +969,11 @@
 
     function formatMoney(value) {
       return round2(value).toFixed(2);
+    }
+
+    function roundFeeForMarketplace(value, marketplace) {
+      if (marketplace.feeRounding === "integer") return Math.round(value);
+      return round2(value);
     }
 
     function formatPercent(value) {
@@ -1210,6 +1222,7 @@
             ["站点代码", "US、CA、MX、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP。大小写均可。"],
             ["佣金类目", "category 是 Amazon referral fee 佣金类目，不是前台 browse node。可填费率表里的 id 或佣金类目名称。"],
             ["售价", "item_price 填有效 sale price / your price；留空时输出该佣金类目的佣金率场景。"],
+            ["积分", "points 为可选字段，仅用于日本站实际结算模拟；填写后会从 JP 佣金计算分母中扣除。"],
             ["最低佣金", "批量导入不填写最低佣金，系统按站点和佣金类目的默认最低佣金计算。"],
             ["分母口径", "买家支付运费、礼品包装、其它费用和税费是否计入，请看网页“口径”页。当前批量输入默认只填商品售价。"]
           ]
@@ -1221,7 +1234,8 @@
             ["country", "是", "站点代码", "US", "支持 US/CA/MX/UK/DE/FR/IT/ES/NL/SA/AE/AU/JP；可小写。"],
             ["sku", "是", "SKU 或自定义识别码", "SKU-001", "结果表按该字段识别单个 SKU。"],
             ["category", "是", "Amazon referral fee 佣金类目", "home_kitchen", "可填 id 或佣金类目名称；不同站点类目不同。"],
-            ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"]
+            ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"],
+            ["points", "否", "积分/点数抵扣金额", "100", "仅 JP 使用；其它站点填了也不会参与计算。"]
           ]
         },
         {
@@ -1361,11 +1375,14 @@
       const marketplace = getMarketplace(input.marketplace ?? input.country);
       const rule = findRule(input.category, marketplace.code);
       const itemPrice = safeNumber(input.item_price ?? input.item_price_usd ?? input.itemPrice, 0);
+      const pointsAmount = marketplace.code === "JP"
+        ? Math.min(itemPrice, Math.max(0, safeNumber(input.points ?? input.jp_points ?? input.pointsAmount, 0)))
+        : 0;
       const minimum = safeNumber(input.minimum_referral_fee ?? input.minimum_referral_fee_usd ?? input.minimumFee ?? rule.minimum ?? marketplace.defaultMinimum ?? 0, 0);
-      const totalSalesPrice = round2(itemPrice);
+      const totalSalesPrice = round2(Math.max(0, itemPrice - pointsAmount));
       const raw = calculateRawFee(totalSalesPrice, rule);
-      const proportionalFee = round2(raw.rawFee);
-      const referralFee = round2(Math.max(proportionalFee, minimum));
+      const proportionalFee = roundFeeForMarketplace(raw.rawFee, marketplace);
+      const referralFee = roundFeeForMarketplace(Math.max(proportionalFee, minimum), marketplace);
       const minimumTriggered = referralFee > proportionalFee;
       const effectiveRate = totalSalesPrice > 0 ? referralFee / totalSalesPrice : 0;
 
@@ -1378,6 +1395,7 @@
         rule_mode: rule.mode,
         price_condition: "已提供售价",
         item_price_local_currency: formatMoney(itemPrice),
+        points_adjustment_local_currency: formatMoney(pointsAmount),
         total_sales_price_local_currency: formatMoney(totalSalesPrice),
         rate_rule: rateLabel(rule),
         applied_rate: raw.appliedRateLabel,
@@ -1387,9 +1405,9 @@
         effective_referral_rate: formatPercent(effectiveRate),
         net_after_referral_local_currency: formatMoney(totalSalesPrice - referralFee),
         minimum_triggered: minimumTriggered ? "YES" : "NO",
-        formula: raw.formula,
+        formula: `${raw.formula}${marketplace.feeRounding === "integer" ? "；佣金金额按 JPY 取整" : ""}`,
         rule_source_url: marketplace.source,
-        note: rule.note || ""
+        note: [rule.note || "", pointsAmount ? "JP 积分抵扣已从佣金计算分母中扣除。" : ""].filter(Boolean).join("；")
       };
     }
 
@@ -1475,6 +1493,8 @@
         status: "ok",
         calculation_mode: mode,
         item_price_local_currency: suppliedPrice,
+        points_adjustment_local_currency: uniqueJoined(scenarioRows.map(row => row.points_adjustment_local_currency)),
+        total_sales_price_local_currency: uniqueJoined(scenarioRows.map(row => row.total_sales_price_local_currency)),
         price_band: hasPrice(input) ? "已提供售价" : "UNKNOWN / ENUMERATED",
         price_conditions: uniqueJoined(scenarioRows.map(row => row.price_condition)),
         applied_referral_rates: uniqueJoined(scenarioRows.map(row => row.applied_rate)),
@@ -1513,6 +1533,7 @@
         sku: document.getElementById("sku").value,
         category: document.getElementById("category").value,
         itemPrice: document.getElementById("itemPrice").value,
+        pointsAmount: document.getElementById("pointsAmount").value,
         minimumFee: document.getElementById("minimumFee").value
       };
     }
@@ -1698,8 +1719,8 @@
           buyer_shipping: "计入",
           gift_wrap: "计入",
           other_fees: "未列明",
-          tax_treatment: "买家为每件商品支付的适用税费计入",
-          tool_input_basis: "当前输入 sale price / your price；如要模拟运费、礼品包装或适用税费的分母，需要并入输入价格"
+          tax_treatment: "买家为每件商品支付的适用税费计入；佣金金额计算后按 JPY 取整",
+          tool_input_basis: "当前输入 sale price / your price；points 可填日本站积分抵扣金额并从佣金计算分母中扣除；如要模拟运费、礼品包装或适用税费，需要并入输入价格"
         }
       };
       return rows[code] || {
@@ -1771,7 +1792,7 @@
         return;
       }
       const headers = [
-        "country", "currency", "sku", "category_name", "status", "calculation_mode", "item_price_local_currency", "price_band",
+        "country", "currency", "sku", "category_name", "status", "calculation_mode", "item_price_local_currency", "points_adjustment_local_currency", "total_sales_price_local_currency", "price_band",
         "price_conditions", "applied_referral_rates", "rate_rule", "minimum_referral_fee_local_currency",
         "scenario_count", "price_point_count", "unique_applied_rate_count", "all_referral_fees_local_currency", "min_referral_fee_local_currency", "max_referral_fee_local_currency",
         "effective_referral_rates", "net_after_referral_local_currency", "minimum_triggered",
