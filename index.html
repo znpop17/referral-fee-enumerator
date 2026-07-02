@@ -514,7 +514,7 @@
             <div class="table-wrap">
               <table id="feeBaseTable"></table>
             </div>
-            <div class="notice">本工具的定价输入默认填写 Amazon 上有效的 sale price / your price，等同于假设买家支付运费、礼品包装费和其它费用为 0。日本站可额外填写整数积分比例，如 1 表示 1%、2 表示 2%，系统会按售价计算积分抵扣并从佣金计算分母中扣除；若后续要测 FBM 运费收费场景，可以把运费加进商品售价一起测。</div>
+            <div class="notice">本工具的定价输入默认填写 Amazon 上有效的 sale price / your price，等同于假设买家支付运费、礼品包装费和其它费用为 0。日本站可额外填写整数积分比例，如 1 表示 1%、2 表示 2%；系统会按售价乘积分比例后将积分金额向下取整，例如 5439 x 1% = 54.39 时按 54 JPY 扣减，再从佣金计算分母中扣除。若后续要测 FBM 运费收费场景，可以把运费加进商品售价一起测。</div>
             <div class="notice">多数类目存在每件最低 referral fee；金额按所选站点原币计算。如果按比例计算的佣金小于最低值，本工具会取最低佣金，并展示最低佣金是否触发。</div>
             <div class="notice" id="sourceStatus"></div>
           </div>
@@ -896,7 +896,7 @@
         source: "https://sellercentral-japan.amazon.com/help/hub/reference/external/G200336920#wjz_cjc_jcb",
         status: "enabled",
         feeBaseStatus: "confirmed",
-        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家为每件商品支付的适用税费；日本站实际结算中积分比例会换算为抵扣金额并影响佣金计算分母，佣金金额计算后按 JPY 取整",
+        feeBaseDefinition: "单件商品总销售价格：商品价格 + 运费 + 礼品包装费 + 买家为每件商品支付的适用税费；日本站实际结算中积分比例会先换算为积分金额并向下取整，再影响佣金计算分母，佣金金额计算后按 JPY 取整",
         defaultMinimum: 30,
         feeRounding: "integer",
         rules: [
@@ -1222,7 +1222,7 @@
             ["站点代码", "US、CA、MX、UK、DE、FR、IT、ES、NL、SA、AE、AU、JP。大小写均可。"],
             ["佣金类目", "category 是 Amazon referral fee 佣金类目，不是前台 browse node。可填费率表里的 id 或佣金类目名称。"],
             ["售价", "item_price 填有效 sale price / your price；留空时输出该佣金类目的佣金率场景。"],
-            ["积分", "points_percent 为可选字段，仅用于日本站实际结算模拟；只能填写整数比例，如 1 表示 1%、2 表示 2%。"],
+            ["积分", "points_percent 为可选字段，仅用于日本站实际结算模拟；只能填写整数比例，如 1 表示 1%、2 表示 2%；积分金额会向下取整，例如 5439 x 1% = 54.39 时按 54 JPY 扣减。"],
             ["最低佣金", "批量导入不填写最低佣金，系统按站点和佣金类目的默认最低佣金计算。"],
             ["分母口径", "买家支付运费、礼品包装、其它费用和税费是否计入，请看网页“口径”页。当前批量输入默认只填商品售价。"]
           ]
@@ -1235,7 +1235,7 @@
             ["sku", "是", "SKU 或自定义识别码", "SKU-001", "结果表按该字段识别单个 SKU。"],
             ["category", "是", "Amazon referral fee 佣金类目", "home_kitchen", "可填 id 或佣金类目名称；不同站点类目不同。"],
             ["item_price", "否", "有效 sale price / your price", "24.99", "留空时做佣金率场景穷举；填写时计算具体佣金金额。"],
-            ["points_percent", "否", "积分比例", "1", "仅 JP 使用；只能填整数百分比，其它站点填了也不会参与计算。"]
+            ["points_percent", "否", "积分比例", "1", "仅 JP 使用；只能填整数百分比；积分金额会向下取整，其它站点填了也不会参与计算。"]
           ]
         },
         {
@@ -1413,7 +1413,7 @@
         minimum_triggered: minimumTriggered ? "YES" : "NO",
         formula: `${raw.formula}${marketplace.feeRounding === "integer" ? "；佣金金额按 JPY 取整" : ""}`,
         rule_source_url: marketplace.source,
-        note: [rule.note || "", pointsPercent ? `JP 积分比例 ${pointsPercent}% 已换算为积分抵扣并从佣金计算分母中扣除。` : ""].filter(Boolean).join("；")
+        note: [rule.note || "", pointsPercent ? `JP 积分比例 ${pointsPercent}% 已换算为积分抵扣 ${formatMoney(pointsAmount)}，积分金额已向下取整，并从佣金计算分母中扣除。` : ""].filter(Boolean).join("；")
       };
     }
 
@@ -1727,7 +1727,7 @@
           gift_wrap: "计入",
           other_fees: "未列明",
           tax_treatment: "买家为每件商品支付的适用税费计入；佣金金额计算后按 JPY 取整",
-          tool_input_basis: "当前输入 sale price / your price；points_percent 可填日本站整数积分比例，并按售价换算为积分抵扣金额后从佣金计算分母中扣除；如要模拟运费、礼品包装或适用税费，需要并入输入价格"
+          tool_input_basis: "当前输入 sale price / your price；points_percent 可填日本站整数积分比例，并按售价换算为积分抵扣金额，积分金额向下取整后从佣金计算分母中扣除；如要模拟运费、礼品包装或适用税费，需要并入输入价格"
         }
       };
       return rows[code] || {
